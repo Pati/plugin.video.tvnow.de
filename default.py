@@ -8,7 +8,6 @@ import pickle
 from navigation import Navigation
 from database import Database
 import xbmcaddon
-import favoriten
 
 addon_handle = int(sys.argv[1])
 plugin_base_url = sys.argv[0]
