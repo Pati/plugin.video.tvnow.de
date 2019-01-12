@@ -50,6 +50,8 @@ if params:
     elif params['action'] == 'favlistAdd':
         fav = favoriten.Favoriten()
         fav.favadd(params['url'], params['title'] , params['img'])
+    elif params['action'] == 'listSeasonByYear':
+        nav.listEpisodesFromSeasonByYear(params['year'],params['id'])
 else:
     nav.rootDir()
     

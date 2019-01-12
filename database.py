@@ -31,14 +31,16 @@ class Database():
         totalitems = data["total"]
         for i in range((totalitems // 250) + 1):
             response = requests.get("%s&page=%d&maxPerPage=250" % (s_a_z_url, i + 1))
+            print response.json()
             data = response.json()
             for item in data["items"]:
                 sendung = Sendung(item["id"], item["title"],item["genres"],item["station"],item["titleGroup"])
                 self.database.append(sendung)
                 self.addToDict(self.sAzDict,item["titleGroup"],sendung)
                 self.addToDict(self.stationDict,item["station"],sendung)
-                for cat in item["genres"]:
-                    self.addToDict(self.catDict,cat,sendung)
+                if item["genres"] != None:
+                    for cat in item["genres"]:
+                        self.addToDict(self.catDict,cat,sendung)
         self.lastUpdate = time.time()
         return True
 
