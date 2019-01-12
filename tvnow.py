@@ -48,6 +48,7 @@ class TvNow:
         self.licence_url = licence_url
         self.tokenset = False
         self.token = ''
+        self.usingAccount = False
 
         # Create session with old cookies
         self.session = requests.session()
@@ -58,6 +59,26 @@ class TvNow:
                 self.session.headers.setdefault('x-auth-token', pickle.load(f))
                 self.tokenset = True
         return
+        
+    def getToken(self):
+        baseEndPoint = "https://www.tvnow.de/"
+        endPoint = baseEndPoint
+        headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
+        r = requests.get(endPoint,headers=headers)
+        m = re.search(r'<script type="text/javascript" src="(main\.[A-z0-9]+\.js)">', r.text)
+        jsName = ""
+        if m:
+            jsName = m.group(1)
+        else:
+            return "0"
+            
+        endPoint = baseEndPoint + '/' + jsName
+        r = requests.get(endPoint,headers=headers)
+        m = re.search(r'e.prototype.getDefaultUserdata=function\(\){return{token:"([A-z0-9.]+)"', r.text)
+        if m:
+            return m.group(1)
+        return "0"
+
 
 
     def isLoggedIn(self):
@@ -78,6 +99,7 @@ class TvNow:
 
     def sendLogin(self, username, password):
         # Try to login
+        
         jlogin = { "email" : username, "password": password}
         r = self.session.post("https://api.tvnow.de/v3/backend/login?fields=[%22id%22,%20%22token%22,%20%22user%22,[%22agb%22]]", json=jlogin)
         #Parse jsonp
@@ -90,15 +112,26 @@ class TvNow:
     def login(self):
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
-            statuscode , response = self.sendLogin(username, password)
-            if statuscode != 200:
-                xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
-                return False
-            elif "token" in response:
-                self.token = response["token"]
-                self.tokenset = True
-                self.session.headers.setdefault('x-auth-token', response["token"])
-                return True
+            self.usingAccount = False
+            if username != "" and password != "":
+                statuscode , response = self.sendLogin(username, password)
+                if statuscode != 200:
+                    xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
+                    return False
+                elif "token" in response:
+                    self.token = response["token"]
+                    self.tokenset = True
+                    self.session.headers.setdefault('x-auth-token', response["token"])
+                    self.usingAccount = True
+                    return True
+            else:
+                token = self.getToken()
+                if token != "0":
+                    self.token = token
+                    return True
+                else:
+                    xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
+                    return False
         else:
             return True
 
