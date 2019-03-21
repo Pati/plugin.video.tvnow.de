@@ -16,7 +16,7 @@ import xbmcgui
 import xbmcaddon, xbmcplugin
 
 
-licence_url = 'https://widevine.rtl.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&Content-Type=application/x-www-form-urlencoded&x-auth-token={TOKEN}|R{SSM}|'
+licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
 addon = xbmcaddon.Addon()
 addon_handle = int(sys.argv[1])
 username = addon.getSetting('email')
@@ -70,11 +70,12 @@ class TvNow:
         if m:
             jsName = m.group(1)
         else:
+            xbmcgui.Dialog().notification('Fehler GetToken', 'JS not found', icon=xbmcgui.NOTIFICATION_ERROR)
             return "0"
             
         endPoint = baseEndPoint + '/' + jsName
         r = requests.get(endPoint,headers=headers)
-        m = re.search(r'e.prototype.getDefaultUserdata=function\(\){return{token:"([A-z0-9.]+)"', r.text)
+        m = re.search(r'[A-z]\.prototype\.getDefaultUserdata=function\(\){return{token:"([A-z0-9.]+)"', r.text)
         if m:
             return m.group(1)
         return "0"
@@ -130,7 +131,7 @@ class TvNow:
                     self.token = token
                     return True
                 else:
-                    xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
+                    xbmcgui.Dialog().notification('Fehler', 'Token not found', icon=xbmcgui.NOTIFICATION_ERROR)
                     return False
         else:
             return True
@@ -138,20 +139,34 @@ class TvNow:
         # If any case is not matched return login failed
         return False
 
-    def play(self, manifest_url):
+    def getPlayBackUrl(self,assetID):
+        url = "https://apigw.tvnow.de/module/player/%d" % int(assetID)
+        r = requests.get(url)
+        data = r.json()
+        if "manifest" in data:
+            if "dashhd" in data["manifest"]:
+                return data["manifest"]["dashhd"]
+            if "dash" in data["manifest"]: # Fallback
+                return data["manifest"]["dash"]
+        return ""
+
+    def play(self, assetID):
         if self.login():
             # Prepare new ListItem to start playback
-            li = xbmcgui.ListItem(path=manifest_url)
-            # Inputstream settings
-            is_addon = getInputstreamAddon()
-            if not is_addon:
-                xbmcgui.Dialog().notification('TvNow Fehler', 'Inputstream Addon fehlt!', xbmcgui.NOTIFICATION_ERROR, 2000, True)
-                return False
-            li.setProperty(is_addon + '.license_type', 'com.widevine.alpha')
-            li.setProperty(is_addon + '.manifest_type', 'mpd')
-            li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
-            li.setProperty('inputstreamaddon', is_addon)
-            # Start Playing
-            xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
-            
+            playBackUrl = self.getPlayBackUrl(assetID)
+            if playBackUrl != "":
+                li = xbmcgui.ListItem(path=playBackUrl)
+                # Inputstream settings
+                is_addon = getInputstreamAddon()
+                if not is_addon:
+                    xbmcgui.Dialog().notification('TvNow Fehler', 'Inputstream Addon fehlt!', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+                    return False
+                li.setProperty(is_addon + '.license_type', 'com.widevine.alpha')
+                li.setProperty(is_addon + '.manifest_type', 'mpd')
+                li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
+                li.setProperty('inputstreamaddon', is_addon)
+                # Start Playing
+                xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+            else:
+                xbmcgui.Dialog().notification('Abspielen fehlgeschlagen', 'Es ist keine AbspielURL vorhanden', icon=xbmcgui.NOTIFICATION_ERROR)
 
