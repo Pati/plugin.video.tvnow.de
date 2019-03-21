@@ -39,7 +39,7 @@ if params:
     elif params['action'] == 'listPage':
         nav.listSeasonsFromSeries(params['id'])
     elif params['action'] == 'listSeason':
-        nav.listEpisodesFromSeason(params['id'])
+        nav.listEpisodesFromSeason(params['season_id'], params['id'])
     elif params['action'] == 'listDict':
         nav.listDict(params["id"], params['dict'])
     elif params['action'] == 'listDictCats':
@@ -51,7 +51,7 @@ if params:
         fav = favoriten.Favoriten()
         fav.favadd(params['url'], params['title'] , params['img'])
     elif params['action'] == 'listSeasonByYear':
-        nav.listEpisodesFromSeasonByYear(params['year'],params['id'])
+        nav.listEpisodesFromSeasonByYear(params['year'], params['month'],params['id'])
 else:
     nav.rootDir()
     
