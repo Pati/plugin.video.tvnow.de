@@ -139,8 +139,11 @@ class TvNow:
         # If any case is not matched return login failed
         return False
 
-    def getPlayBackUrl(self,assetID):
-        url = "https://apigw.tvnow.de/module/player/%d" % int(assetID)
+    def getPlayBackUrl(self,assetID, live = False):
+        if live:
+            url = "https://apigw.tvnow.de/module/player/epg/%d?drm=1" % int(assetID)
+        else:
+            url = "https://apigw.tvnow.de/module/player/%d" % int(assetID)
         r = self.session.get(url)
         data = r.json()
         if "manifest" in data:
@@ -150,10 +153,10 @@ class TvNow:
                 return data["manifest"]["dash"]
         return ""
 
-    def play(self, assetID):
+    def play(self, assetID, live=False):
         if self.login():
             # Prepare new ListItem to start playback
-            playBackUrl = self.getPlayBackUrl(assetID)
+            playBackUrl = self.getPlayBackUrl(assetID,live)
             if playBackUrl != "":
                 li = xbmcgui.ListItem(path=playBackUrl)
                 # Inputstream settings

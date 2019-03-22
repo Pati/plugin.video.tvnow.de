@@ -51,6 +51,27 @@ class Navigation():
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
+        
+    def listLiveTV(self):
+        url = apiBase + "/module/teaserrow/epglivetv"
+        r = requests.get(url)
+        data = r.json()
+        for item in data["items"]:
+            baseJSON = item["station"][0]["now"]
+            stationName = baseJSON["station"]
+            stationID = baseJSON["id"]
+            xbmcplugin.setPluginCategory(addon_handle, "LiveTV")
+            xbmcplugin.setContent(addon_handle, 'episodes')
+            if self.showPremium:
+                url = common.build_url({'action': 'playLive', 'vod_url': stationID})
+                li = xbmcgui.ListItem()
+                li.setProperty('IsPlayable', 'true')
+                li.setInfo('video', "")
+                li.setLabel('%s' % (stationName))
+                li.setArt({'poster': baseJSON["image"][0]["src"]})
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                            listitem=li, isFolder=False)  
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
     def rootDir(self):       
         url = common.build_url({'action': 'listDictCats', 'id': 'Az'})
@@ -61,6 +82,11 @@ class Navigation():
         url = common.build_url({'action': 'listDictCats', 'id': 'station'})
         li = xbmcgui.ListItem()
         li.setLabel('Sendungen nach Sender')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                   listitem=li, isFolder=True)
+        url = common.build_url({'action': 'listLive'})
+        li = xbmcgui.ListItem()
+        li.setLabel('LiveTV')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                    listitem=li, isFolder=True)
     

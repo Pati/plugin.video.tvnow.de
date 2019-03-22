@@ -36,6 +36,8 @@ if params:
 
     if params['action'] == 'playVod':
         vod.playAsset(params['vod_url'])
+    if params['action'] == 'playLive':
+        vod.playLive(params['vod_url'])
     elif params['action'] == 'listPage':
         nav.listSeasonsFromSeries(params['id'])
     elif params['action'] == 'listSeason':
@@ -44,6 +46,8 @@ if params:
         nav.listDict(params["id"], params['dict'])
     elif params['action'] == 'listDictCats':
         nav.listDictCategories(params["id"])
+    elif params['action'] == 'listLive':
+        nav.listLiveTV()
     elif params['action'] == 'favList':
         fav = favoriten.Favoriten()
         fav.listfav()
