@@ -113,11 +113,17 @@ class Navigation():
         modulUrl = ""
         series_id = data["id"]
         series_url = ""
+        movieID = -1
+        
+        
         for module in data["modules"]:
-            if module["moduleLayout"] == "format_season_navigation":
+            if module["moduleLayout"] == "default":
+                movieID = module["id"]
+            if module["moduleLayout"] == "format_season_navigation" :
                 modulUrl = module["moduleUrl"]
             elif module["moduleLayout"] == "format_episode":
                 series_url = module["moduleUrl"]
+            
         if modulUrl != "" and series_url != "":
             xbmcplugin.setContent(addon_handle, 'seasons')
             url = apiBase + modulUrl
@@ -145,20 +151,20 @@ class Navigation():
                         li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
                         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                         listitem=li, isFolder=True)
-        '''else:
-            if len(data['formatTabs']["items"]) == 1:
-                return self.listEpisodesFromSeason(data['formatTabs']["items"][0]["id"])
-            else:
-                for season in data['formatTabs']["items"]:
-                    print(season)
-                    url = common.build_url({'action': 'listSeason', 'id': season['id']})
-                    label = '%s - %s' % (data["title"], season['headline'])
-                    li = xbmcgui.ListItem(label=label)
-                    li.setProperty('IsPlayable', 'false')
-                    li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
-                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                                    listitem=li, isFolder=True)'''
-
+        elif movieID != -1:
+            title_stripped = data['title'].replace("im Online Stream | TVNOW","")
+            xbmcplugin.setPluginCategory(addon_handle, title_stripped)
+            xbmcplugin.setContent(addon_handle, 'episodes')
+            if self.showPremium or episode["isPremium"] == False:
+                url = common.build_url({'action': 'playVod', 'vod_url': movieID})
+                li = xbmcgui.ListItem()
+                li.setProperty('IsPlayable', 'true')
+                li.setLabel('%s' % (title_stripped))
+                li.setInfo('video', '')
+                li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                            listitem=li, isFolder=False)
+            
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
         
     def getInfoLabel(self, asset_type, data):
