@@ -143,7 +143,6 @@ class TvNow:
         url = "https://apigw.tvnow.de/module/player/%d" % int(assetID)
         r = self.session.get(url)
         data = r.json()
-        print data
         if "manifest" in data:
             if "dashhd" in data["manifest"]:
                 return data["manifest"]["dashhd"]
