@@ -32,8 +32,6 @@ nav = Navigation(db)
 # Router for all plugin actions
 if params:
 
-    print params
-
     if params['action'] == 'playVod':
         vod.playAsset(params['vod_url'])
     if params['action'] == 'playLive':
@@ -48,6 +46,8 @@ if params:
         nav.listDictCategories(params["id"])
     elif params['action'] == 'listLive':
         nav.listLiveTV()
+    elif params['action'] == 'login':
+        nav.login()
     elif params['action'] == 'favList':
         fav = favoriten.Favoriten()
         fav.listfav()
