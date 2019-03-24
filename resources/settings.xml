@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
   <category label="Login">
-      <setting id="email" type="text" label="E-Mail" default="" />
-      <setting id="password" type="text" option="hidden" label="Passwort" default="" />
+      <setting id="set_login" type="action" label="Anmelden..." action="RunPlugin(plugin://plugin.video.tvnow.de/?action=login)" option="close"/>
+      <setting id="premium" type="bool" visible="false" label=""  default="false"/>
+      <setting id="acc_token" type="text" visible="false" label=""  default=""/>
+      <setting id="email" type="text" label="Angemeldet als" enable="!eq(0,)" default="" subsetting="true" />
+      <setting id="password_enc" type="text" option="hidden" visible="false" label="Passwort" default="" />
   </category>
 </settings>

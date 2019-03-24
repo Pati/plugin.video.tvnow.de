@@ -9,20 +9,13 @@ import datetime
 import time
 import pickle
 import os
+from pyDes import *
+import uuid
 import xml.etree.ElementTree as ET
 
 import xbmc
 import xbmcgui
 import xbmcaddon, xbmcplugin
-
-
-licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
-addon = xbmcaddon.Addon()
-addon_handle = int(sys.argv[1])
-username = addon.getSetting('email')
-password = addon.getSetting('password')
-datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
-tokenPath = datapath + 'TOKEN'
 
 # Get installed inputstream addon
 def getInputstreamAddon():
@@ -35,6 +28,34 @@ def getInputstreamAddon():
                 return i
         
     return None
+    
+def getmac():
+    mac = uuid.getnode()
+    if (mac >> 40) % 2:
+        mac = node()
+    return uuid.uuid5(uuid.NAMESPACE_DNS, str(mac)).bytes
+    
+def encode(data):
+    k = triple_des(getmac(), CBC, "\0\0\0\0\0\0\0\0", padmode=PAD_PKCS5)
+    d = k.encrypt(data)
+    return base64.b64encode(d)
+
+def decode(data):
+    if not data:
+        return ''
+    k = triple_des(getmac(), CBC, "\0\0\0\0\0\0\0\0", padmode=PAD_PKCS5)
+    d = k.decrypt(base64.b64decode(data))
+    return d
+    
+licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
+addon = xbmcaddon.Addon()
+addon_handle = int(sys.argv[1])
+username = addon.getSetting('email')
+password = decode(addon.getSetting('password_enc'))
+password_old = addon.getSetting('password')
+datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
+token = addon.getSetting('acc_token')
+
 
 class TvNow:
     """TvNow Class"""
@@ -44,7 +65,6 @@ class TvNow:
 
     def __init__(self):
         self.sessionId = ''
-        self.tokenPath = tokenPath
         self.licence_url = licence_url
         self.tokenset = False
         self.token = ''
@@ -53,12 +73,20 @@ class TvNow:
         # Create session with old cookies
         self.session = requests.session()
         self.session.headers.setdefault('User-Agent','Dalvik/2.1.0 (Linux; U; Android 7.1.1)')
+        
+        if password_old != "":
+            encpassword = encode(password_old)
+            password = password_old
+            addon.setSetting('password_enc', encpassword)
+            addon.setSetting('password', "")
+            self.sendLogin(username, password)
 
-        if os.path.isfile(tokenPath):
-            with open(tokenPath) as f:
-                self.session.headers.setdefault('x-auth-token', pickle.load(f))
-                self.tokenset = True
-        return
+        if token != "":
+            self.token = token
+            self.tokenset = True
+            self.session.headers.setdefault('x-auth-token', self.token )
+        else:
+            self.login()
         
     def getToken(self):
         baseEndPoint = "https://www.tvnow.de/"
@@ -89,42 +117,53 @@ class TvNow:
         r = self.session.get('https://api.tvnow.de/v3/backend/login?fields=[%22id%22,%20%22token%22,%20%22user%22,[%22agb%22]]')
         #Parse json
         response = json.loads(r.text)
-
-        print response
-
         if r.status_code == 200 and "token" in response:
-            print "User still logged in"
+            self.token = response["token"]
+            self.session.headers.setdefault('x-auth-token', self.token)
+            addon.setSetting('acc_token', self.token)
+            base64Parts = self.token.split(".")
+            tokendata = "%s==" % base64Parts[1]
+            userData = json.loads(base64.b64decode(tokendata))
+            if "premium" in userData["roles"]:
+                addon.setSetting('premium', "true")
             return True
-        return False
-
+        self.session.headers.setdefault('x-auth-token', "")
+        addon.setSetting('acc_token', "")
+        return False            
 
     def sendLogin(self, username, password):
-        # Try to login
-        
         jlogin = { "email" : username, "password": password}
         r = self.session.post("https://api.tvnow.de/v3/backend/login?fields=[%22id%22,%20%22token%22,%20%22user%22,[%22agb%22]]", json=jlogin)
-        #Parse jsonp
+        #Parse json
         response = r.text
         response = json.loads(response)
-        print response
-        return r.status_code,response
-        
-
+        statuscode = r.status_code
+        if statuscode != 200:
+            xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
+            return False
+        elif "token" in response:
+            self.token = response["token"]
+            self.tokenset = True
+            self.session.headers.setdefault('x-auth-token', response["token"])
+            self.usingAccount = True
+            
+            addon.setSetting('acc_token', self.token)
+            base64Parts = self.token.split(".")
+            tokendata = "%s==" % base64Parts[1]
+            userData = json.loads(base64.b64decode(tokendata))
+            if "premium" in userData["roles"]:
+                addon.setSetting('premium', "true")
+            encpassword = encode(password)
+            addon.setSetting('email', username)
+            addon.setSetting('password_enc', encpassword)
+            return True
     def login(self):
+        addon.setSetting('premium', "false")
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
             self.usingAccount = False
             if username != "" and password != "":
-                statuscode , response = self.sendLogin(username, password)
-                if statuscode != 200:
-                    xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
-                    return False
-                elif "token" in response:
-                    self.token = response["token"]
-                    self.tokenset = True
-                    self.session.headers.setdefault('x-auth-token', response["token"])
-                    self.usingAccount = True
-                    return True
+                self.sendLogin(username, password)
             else:
                 token = self.getToken()
                 if token != "0":

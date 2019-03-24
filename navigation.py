@@ -10,11 +10,8 @@ import datetime
 import time
 import resources.lib.common as common
 from sendung import Sendung
+import tvnow
 apiBase = "https://apigw.tvnow.de"
-formatSeasondetailURL = "https://api.tvnow.de/v3/movies/formatTabPage/{fid}?fields=%5B%22id%22%2C%22episode%22%2C%22season%22%2C%22title%22%2C%22articleShort%22%2C%22isDrm%22%2C%22free%22%2C%22broadcastPreviewStartDate%22%2C%22broadcastStartDate%22%2C%22availableDate%22%2C%22duration%22%2C%22aspectRatio%22%2C%22dontCall%22%2C%22cornerLogo%22%2C%22productPlacementType%22%2C%22timeType%22%2C%22videoPlazaTags%22%2C%22alternateBroadcastDateText%22%2C%22blockadeText%22%2C%22pictures%22%2C%5B%22default%22%2C%22portrait%22%5D%2C%22manifest%22%2C%5B%22hls%22%2C%22dash%22%5D%2C%22format%22%2C%5B%22id%22%2C%22title%22%2C%22titleGroup%22%2C%22station%22%2C%22tabSpecialTeaserPosition%22%2C%22tabSeason%22%2C%22annualNavigation%22%2C%22formatTabs%22%2C%5B%22id%22%2C%22headline%22%2C%22emptyListText%22%5D%2C%22genres%22%2C%22szm%22%2C%22emptyListText%22%2C%22videoPlazaAdTag%22%5D%5D&filter=%7B%7D&order=BroadcastStartDate%20desc&maxPerPage=30"
-formatSeasondetailYearURL="https://api.tvnow.de/v3/movies?fields=*,format,paymentPaytypes,pictures,trailers,packages&filter={%22BroadcastStartDate%22:{%22between%22:{%22start%22:%22{year}-01-01%2000:00:00%22,%22end%22:%20%22{year}-12-31%2023:59:59%22}},%20%22FormatId%22%20:%20{fid}}&maxPerPage=3000&order=BroadcastStartDate%20asc"
-formatdetailURL = "https://api.tvnow.de/v3/formats/{fid}/movies/nownext?type=next&fields=%5B%22id%22%2C%22episode%22%2C%22season%22%2C%22title%22%2C%22articleShort%22%2C%22broadcastPreviewStartDate%22%2C%22broadcastStartDate%22%2C%22availableDate%22%2C%22duration%22%2C%22aspectRatio%22%2C%22dontCall%22%2C%22cornerLogo%22%2C%22productPlacementType%22%2C%22timeType%22%2C%22videoPlazaTags%22%2C%22alternateBroadcastDateText%22%2C%22blockadeText%22%2C%22pictures%22%2C%5B%22default%22%2C%22portrait%22%5D%2C%22manifest%22%2C%5B%22hls%22%2C%22dash%22%5D%2C%22format%22%2C%5B%22id%22%2C%22title%22%2C%22titleGroup%22%2C%22station%22%2C%22tabSpecialTeaserPosition%22%2C%22tabSeason%22%2C%22annualNavigation%22%2C%22formatTabs%22%2C%5B%22id%22%2C%22headline%22%2C%22emptyListText%22%5D%2C%22genres%22%2C%22szm%22%2C%22emptyListText%22%2C%22videoPlazaAdTag%22%5D%5D"
-#formatdetailURL = "https://api.tvnow.de/v3/formats/{fid}?fields=%5B%*,.*,formatTabs.*,formatTabs.headline,annualNavigation.*5D"
 formatImageURL = "https://ais.tvnow.de/tvnow/format/{fid}_formatlogo/408x229/image.jpg"
 episodeImageURL = "https://ais.tvnow.de/tvnow/movie/{eid}/408x229/image.jpg"
 addon_handle = int(sys.argv[1])
@@ -22,15 +19,34 @@ icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png
 xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_NONE)
 xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_LABEL)
 addon = xbmcaddon.Addon()
-username = addon.getSetting('email')
-password = addon.getSetting('password')
 
 class Navigation():
     def __init__(self,db):
         self.db = db
-        self.showPremium = (username != "" and password != "")
+        self.showPremium = (addon.getSetting('premium') == "true")
+    
+    def login(self):  
+        keyboard = xbmc.Keyboard('', 'E-Mail-Adresse')
+        keyboard.doModal()
+        if keyboard.isConfirmed() and keyboard.getText():
+            username = keyboard.getText()
+            password = self.setLoginPW()
+            if password != '': 
+                TvNow = tvnow.TvNow()
+                if TvNow.sendLogin(username, password):
+                    xbmcgui.Dialog().notification('Login erfolgreich', 'Angemeldet als "' + username + '".', icon=xbmcgui.NOTIFICATION_INFO)
+                    return True
+                else:
+                    return False        
+    def setLoginPW(self):
+        keyboard = xbmc.Keyboard('', 'Passwort', True)
+        keyboard.doModal(60000)
+        if keyboard.isConfirmed() and keyboard.getText() and len(keyboard.getText()) > 6:
+            password = keyboard.getText()
+            return password
+        return ''
+        
     def listDictCategories(self, dicttype=""):
-        print(sys.argv)
         d = self.db.getDict(dicttype)
         for item in sorted(d.keys()):
             url = common.build_url({'action': 'listDict', 'id': item, 'dict' : dicttype})
