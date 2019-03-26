@@ -13,6 +13,7 @@ from pyDes import *
 import uuid
 import xml.etree.ElementTree as ET
 
+from platform import node
 import xbmc
 import xbmcgui
 import xbmcaddon, xbmcplugin
