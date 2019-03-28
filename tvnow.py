@@ -127,6 +127,8 @@ class TvNow:
             userData = json.loads(base64.b64decode(tokendata))
             if "premium" in userData["roles"]:
                 addon.setSetting('premium', "true")
+            elif "subscriptionState" in userData and (userData["subscriptionState"]==5 or userData["subscriptionState"]==4):
+                addon.setSetting('premium', "true")
             return True
         self.session.headers.setdefault('x-auth-token', "")
         addon.setSetting('acc_token', "")
@@ -153,6 +155,8 @@ class TvNow:
             tokendata = "%s==" % base64Parts[1]
             userData = json.loads(base64.b64decode(tokendata))
             if "premium" in userData["roles"]:
+                addon.setSetting('premium', "true")
+            elif "subscriptionState" in userData and (userData["subscriptionState"]==5 or userData["subscriptionState"]==4):
                 addon.setSetting('premium', "true")
             encpassword = encode(password)
             addon.setSetting('email', username)
