@@ -194,15 +194,19 @@ class Navigation():
                         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                         listitem=li, isFolder=True)
         elif movieID != -1:
+            url = apiBase + "/module/moviemetadata/" + str(series_id)
+            r = requests.get(url)
+            data = r.json()
             title_stripped = data['title'].replace("im Online Stream | TVNOW","")
             xbmcplugin.setPluginCategory(addon_handle, title_stripped)
             xbmcplugin.setContent(addon_handle, 'episodes')
-            if self.showPremium or episode["isPremium"] == False:
+            if self.showPremium or data["isPremium"] == False:
                 url = common.build_url({'action': 'playVod', 'vod_url': movieID})
                 li = xbmcgui.ListItem()
                 li.setProperty('IsPlayable', 'true')
                 li.setLabel('%s' % (title_stripped))
-                li.setInfo('video', '')
+                info = self.getInfoLabel('Movie', data)
+                li.setInfo('video', info)
                 li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                             listitem=li, isFolder=False)
@@ -211,8 +215,12 @@ class Navigation():
         
     def getInfoLabel(self, asset_type, data):
         info = {}
-        info['title'] = data.get('subheadline', '') 
-        if not data.get('year_of_production', '') == '':
-            info['year'] = data.get('year_of_production', '')
-        info['plot'] = data.get('text', '').replace('\n', '').strip()
+        if asset_type == "Movie":
+            info['title'] = data.get('title', '') 
+            info['plot'] = data.get('description', '').replace('\n', '').strip()
+        else:
+            info['title'] = data.get('subheadline', '') 
+            if not data.get('year_of_production', '') == '':
+                info['year'] = data.get('year_of_production', '')
+            info['plot'] = data.get('text', '').replace('\n', '').strip()
         return info
