@@ -5,6 +5,7 @@
       <setting id="premium" type="bool" visible="false" label=""  default="false"/>
       <setting id="acc_token" type="text" visible="false" label=""  default=""/>
       <setting id="email" type="text" label="Angemeldet als" enable="!eq(0,)" default="" subsetting="true" />
+      <setting id="hd_enabled" type="bool" label="HD" default="true"/>
       <setting id="password_enc" type="text" option="hidden" visible="false" label="Passwort" default="" />
   </category>
 </settings>

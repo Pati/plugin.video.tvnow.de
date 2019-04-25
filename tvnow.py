@@ -56,6 +56,7 @@ password = decode(addon.getSetting('password_enc'))
 password_old = addon.getSetting('password')
 datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
 token = addon.getSetting('acc_token')
+hdEnabled = addon.getSetting('hd_enabled') == "true"
 
 
 class TvNow:
@@ -191,7 +192,7 @@ class TvNow:
         r = self.session.get(url)
         data = r.json()
         if "manifest" in data:
-            if "dashhd" in data["manifest"]:
+            if "dashhd" in data["manifest"] and hdEnabled:
                 return data["manifest"]["dashhd"]
             if "dash" in data["manifest"]: # Fallback
                 return data["manifest"]["dash"]
