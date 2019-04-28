@@ -116,7 +116,7 @@ class TvNow:
         """Check if User is still logged in with the old Token"""
         if not self.tokenset:
             return False
-        r = self.session.get('https://api.tvnow.de/v3/backend/login?fields=[%22id%22,%20%22token%22,%20%22user%22,[%22agb%22]]')
+        r = self.session.get('https://api.tvnow.de/v3/backend/login?fields=%5B%22id%22,%20%22token%22,%20%22user%22,%5B%22agb%22%5D%5D')
         #Parse json
         response = json.loads(r.text)
         if r.status_code == 200 and "token" in response:
@@ -137,7 +137,7 @@ class TvNow:
 
     def sendLogin(self, username, password):
         jlogin = { "email" : username, "password": password}
-        r = self.session.post("https://api.tvnow.de/v3/backend/login?fields=[%22id%22,%20%22token%22,%20%22user%22,[%22agb%22]]", json=jlogin)
+        r = self.session.post("https://api.tvnow.de/v3/backend/login?fields=%5B%22id%22,%20%22token%22,%20%22user%22,%5B%22agb%22%5D%5D", json=jlogin)
         #Parse json
         response = r.text
         response = json.loads(response)
