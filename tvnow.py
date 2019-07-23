@@ -95,17 +95,18 @@ class TvNow:
         endPoint = baseEndPoint
         headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
         r = requests.get(endPoint,headers=headers)
-        m = re.search(r'<script type="text/javascript" src="(main\.[A-z0-9]+\.js)">', r.text)
-        jsName = ""
-        if m:
-            jsName = m.group(1)
-        else:
+        try: jsName = re.findall(r'<script src="(main\-[A-z0-9]+\.[A-z0-9]+\.js)"', r.text, re.S)[-1]
+        except: jsName = ""
+        #m = re.search(r'<script src="(main\-[A-z0-9]+\.[A-z0-9]+\.js)"', r.text)
+        #jsName = ""
+        #if m:
+            #jsName = m.group(1)
+        if jsName == "":
             xbmcgui.Dialog().notification('Fehler GetToken', 'JS not found', icon=xbmcgui.NOTIFICATION_ERROR)
             return "0"
-            
-        endPoint = baseEndPoint + '/' + jsName
+        endPoint = baseEndPoint + jsName
         r = requests.get(endPoint,headers=headers)
-        m = re.search(r'[A-z]\.prototype\.getDefaultUserdata=function\(\){return{token:"([A-z0-9.]+)"', r.text)
+        m = re.search(r'\.prototype\.getDefaultUserdata=function\(\){return{token:"([A-z0-9.]+)"', r.text)
         if m:
             return m.group(1)
         return "0"
