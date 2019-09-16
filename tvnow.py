@@ -101,7 +101,7 @@ class TvNow:
             return "0"
         endPoint = baseEndPoint + jsName
         r = requests.get(endPoint,headers=headers)
-        m = re.search(r'\.prototype\.getDefaultUserdata=function\(\){return{token:"([A-z0-9.]+)"', r.text)
+        m = re.search(r'getDefaultUserdata=function\(\){return{token:"([A-z0-9.]+)"', r.text)
         if m:
             return m.group(1)
         return "0"
