@@ -25,6 +25,17 @@ class Navigation():
         self.db = db
         self.showPremium = (addon.getSetting('premium') == "true")
     
+    def getInfoLabel(self, data, movie=False):
+        info = {}
+        info['title'] = data.get('headline', '') 
+        if not data.get('year_of_production', '') == '':
+            info['year'] = data.get('year_of_production', '')
+        if movie:
+            info['plot'] = data.get('description', '').replace('\n', '').strip()
+        else:
+            info['plot'] = data.get('text', '').replace('\n', '').strip()
+        return info
+    
     def login(self):  
         keyboard = xbmc.Keyboard('', 'E-Mail-Adresse')
         keyboard.doModal()
@@ -112,38 +123,51 @@ class Navigation():
         url = apiBase + series_url + "?year=" + year + '&month=' + month
         r = requests.get(url)
         data = r.json()
-        if len(data['items']) > 0:
-            xbmcplugin.setPluginCategory(addon_handle, data['items'][0]["headline"])
+        totalItems = len(data['items'])
+        if totalItems > 0:
+            listItems = []
             xbmcplugin.setContent(addon_handle, 'episodes')
             for episode in data['items']:
                 if self.showPremium or episode["isPremium"] == False:
-                    url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     li = xbmcgui.ListItem()
                     li.setProperty('IsPlayable', 'true')
-                    info = self.getInfoLabel('Episode', episode)
-                    li.setInfo('video', info)
-                    li.setLabel('%s' % (info['title']))
+                    videoId = episode['videoId']
+                    fID = series_url.split('/')[-1]
+                    url = "{}/{}/{}?episodeId={}".format(apiBase, "module/teaserrow/format/highlight",fID, videoId)
+                    r = requests.get(url)
+                    data = r.json()
+                    epData = data["items"][0]
+                    info = self.getInfoLabel(epData)
+                    li.setInfo('video',info)
+                    li.setLabel('%s' % (episode['headline']))
                     li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id']))})
+                    url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                                listitem=li, isFolder=False)
-            xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)   
+                                                listitem=li, isFolder=False, totalItems=totalItems )
+            xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)          
 
     def listEpisodesFromSeason(self, season_id, series_url):
         url = apiBase + series_url + "?season=" + season_id
         r = requests.get(url)
         data = r.json()
         if len(data['items']) > 0:
-            xbmcplugin.setPluginCategory(addon_handle, data['items'][0]["headline"])
             xbmcplugin.setContent(addon_handle, 'episodes')
             for episode in data['items']:
                 if self.showPremium or episode["isPremium"] == False:
-                    url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     li = xbmcgui.ListItem()
                     li.setProperty('IsPlayable', 'true')
-                    info = self.getInfoLabel('Episode', episode)
+                    videoId = episode['videoId']
+                    fID = series_url.split('/')[-1]
+                    url = "{}/{}/{}?episodeId={}".format(apiBase, "module/teaserrow/format/highlight",fID, videoId)
+                    r = requests.get(url)
+                    data = r.json()
+                    epData = data["items"][0]
+                    info = self.getInfoLabel(epData)
+                    li.setLabel('%s' % (videoId))
                     li.setInfo('video', info)
                     li.setLabel(info['title'])
                     li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id']))})
+                    url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                 listitem=li, isFolder=False)
             xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)   
@@ -156,7 +180,10 @@ class Navigation():
         series_id = data["id"]
         series_url = ""
         movieID = -1
-        
+        temp = data["title"].split("-")
+        #remove TVNOW and other stuff from title
+        clean_title = "".join(temp[0:-1])
+        xbmcplugin.setPluginCategory(addon_handle, clean_title)
         
         for module in data["modules"]:
             if module["moduleLayout"] == "default":
@@ -173,9 +200,6 @@ class Navigation():
             nav_data = r.json()
             
             for items in reversed(nav_data["items"]):
-                #remove TVNOW from title
-                temp = data["title"].split("-")
-                clean_title = "".join(temp[0:-1])
                 if "months" in items:
                     for month in reversed(items["months"]):
                         url = common.build_url({'action': 'listSeasonByYear', 'year': items['year'], 'month': month.keys()[0] , 'id' : series_url})
@@ -205,7 +229,7 @@ class Navigation():
                 li = xbmcgui.ListItem()
                 li.setProperty('IsPlayable', 'true')
                 li.setLabel('%s' % (title_stripped))
-                info = self.getInfoLabel('Movie', data)
+                info = self.getInfoLabel(data, True)
                 li.setInfo('video', info)
                 li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
@@ -213,14 +237,4 @@ class Navigation():
             
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
         
-    def getInfoLabel(self, asset_type, data):
-        info = {}
-        if asset_type == "Movie":
-            info['title'] = data.get('title', '') 
-            info['plot'] = data.get('description', '').replace('\n', '').strip()
-        else:
-            info['title'] = data.get('subheadline', '') 
-            if not data.get('year_of_production', '') == '':
-                info['year'] = data.get('year_of_production', '')
-            info['plot'] = data.get('text', '').replace('\n', '').strip()
-        return info
+    

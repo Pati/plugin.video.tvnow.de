@@ -17,6 +17,7 @@ from platform import node
 import xbmc
 import xbmcgui
 import xbmcaddon, xbmcplugin
+import inputstreamhelper
 
 # Get installed inputstream addon
 def getInputstreamAddon():
@@ -57,6 +58,7 @@ password_old = addon.getSetting('password')
 datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
 token = addon.getSetting('acc_token')
 hdEnabled = addon.getSetting('hd_enabled') == "true"
+helperActivated  = addon.getSetting('is_helper_enabled') == "true"
 
 
 class TvNow:
@@ -159,14 +161,14 @@ class TvNow:
             addon.setSetting('email', username)
             addon.setSetting('password_enc', encpassword)
             return True
-    def login(self):
+    def login(self, play=False):
         addon.setSetting('premium', "false")
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
             self.usingAccount = False
             if username != "" and password != "":
                 self.sendLogin(username, password)
-            else:
+            elif play:
                 token = self.getToken()
                 if token != "0":
                     self.token = token
@@ -187,27 +189,38 @@ class TvNow:
             url = "https://apigw.tvnow.de/module/player/%d" % int(assetID)
         r = self.session.get(url)
         data = r.json()
+        drmProtected = False
+        if "rights" in data and "isDrm" in data["rights"]:
+            drmProtected = data["rights"]["isDrm"]
         if "manifest" in data:
             if "dashhd" in data["manifest"] and hdEnabled:
-                return data["manifest"]["dashhd"]
+                return data["manifest"]["dashhd"], drmProtected
             if "dash" in data["manifest"]: # Fallback
-                return data["manifest"]["dash"]
-        return ""
+                return data["manifest"]["dash"], drmProtected
+        return "", drmProtected
 
     def play(self, assetID, live=False):
-        if self.login():
+        if self.login(True):
             # Prepare new ListItem to start playback
-            playBackUrl = self.getPlayBackUrl(assetID,live)
+            playBackUrl, drmProtected = self.getPlayBackUrl(assetID,live)
             if playBackUrl != "":
                 li = xbmcgui.ListItem(path=playBackUrl)
+                protocol = 'mpd'
+                drm = 'com.widevine.alpha'
                 # Inputstream settings
-                is_addon = getInputstreamAddon()
-                if not is_addon:
-                    xbmcgui.Dialog().notification('TvNow Fehler', 'Inputstream Addon fehlt!', xbmcgui.NOTIFICATION_ERROR, 2000, True)
-                    return False
-                li.setProperty(is_addon + '.license_type', 'com.widevine.alpha')
-                li.setProperty(is_addon + '.manifest_type', 'mpd')
-                li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
+                if helperActivated and drmProtected:
+                    is_helper = inputstreamhelper.Helper(protocol, drm=drm)
+                    if is_helper.check_inputstream():
+                        is_addon = is_helper.inputstream_addon
+                else:
+                    is_addon = getInputstreamAddon()
+                    if not is_addon:
+                        xbmcgui.Dialog().notification('TvNow Fehler', 'Inputstream Addon fehlt!', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+                        return False
+                if drmProtected:
+                    li.setProperty(is_addon + '.license_type', drm)
+                    li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
+                li.setProperty(is_addon + '.manifest_type', protocol)
                 li.setProperty('inputstreamaddon', is_addon)
                 # Start Playing
                 xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
