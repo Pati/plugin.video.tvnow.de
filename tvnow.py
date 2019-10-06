@@ -128,6 +128,8 @@ class TvNow:
                 addon.setSetting('premium', "true")
             elif "subscriptionState" in userData and (userData["subscriptionState"]==5 or userData["subscriptionState"]==4):
                 addon.setSetting('premium', "true")
+            elif "vodPremium" in userData and userData["vodPremium"]==True:
+                addon.setSetting('premium', "true")
             return True
         self.session.headers.setdefault('x-auth-token', "")
         addon.setSetting('acc_token', "")
@@ -219,7 +221,7 @@ class TvNow:
                         return False
                 if drmProtected:
                     li.setProperty(is_addon + '.license_type', drm)
-                    li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
+                li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
                 li.setProperty(is_addon + '.manifest_type', protocol)
                 li.setProperty('inputstreamaddon', is_addon)
                 # Start Playing
