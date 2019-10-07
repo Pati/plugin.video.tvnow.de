@@ -7,6 +7,7 @@
       <setting id="email" type="text" label="Angemeldet als" enable="!eq(0,)" default="" subsetting="true" />
       <setting id="hd_enabled" type="bool" label="HD" default="true"/>
       <setting id="is_helper_enabled" type="bool" label="Benutze Inputstream Helper" default="true"/>
+      <setting id="plot_enabled" type="bool" label="Handlung laden" default="true"/>
       <setting id="password_enc" type="text" option="hidden" visible="false" label="Passwort" default="" />
   </category>
 </settings>

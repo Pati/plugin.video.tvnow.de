@@ -8,6 +8,7 @@ import urllib2
 import json
 import datetime
 import time
+import re
 import resources.lib.common as common
 from sendung import Sendung
 import tvnow
@@ -19,6 +20,55 @@ icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png
 xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_NONE)
 xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_LABEL)
 addon = xbmcaddon.Addon()
+plotEnabled = addon.getSetting('plot_enabled') == "true"
+
+
+def parseDateTime(str):
+    try:
+        m = re.search(r'[A-z]+\.\s+([0-9]+).([0-9]+).([0-9]+),\s+([0-9]+):([0-9]+)', str)
+        if m:
+            return datetime.datetime(int(m.group(3)),int(m.group(2)), int(m.group(1)), int(m.group(4)), int(m.group(5)))
+    except:
+        return None
+
+def buildDirectoryName(data):
+    dirName = ""
+    episode = data["items"][0]
+    if "ecommerce" in episode:
+        ecommerce = episode["ecommerce"]
+        if "teaserFormatName" in ecommerce:
+            dirName = ecommerce["teaserFormatName"]
+    if "ecommerce" in data and "rowName" in data["ecommerce"]:
+        dirName = "%s - %s" % (dirName, data["ecommerce"]["rowName"])
+    return dirName
+def getEpName(episode, info):
+    epNameSuffix = ""
+    epNamePrefix = ""
+    epName = ""
+    if "ecommerce" in episode:
+        ecommerce = episode["ecommerce"]
+        if "teaserEpisodeAirtime" in ecommerce:
+            dt = parseDateTime(ecommerce["teaserEpisodeAirtime"])
+            epNameSuffix = ecommerce["teaserEpisodeAirtime"]
+            if dt:
+                info["date"] = str(dt.date())
+                info["premiered"] = str(dt.date())
+                info["dateadded"] = str(dt)
+                info["aired"] = str(dt.date())
+        if "teaserEpisodeNumber" in ecommerce:
+            epNamePrefix =  ecommerce["teaserEpisodeNumber"]
+        if "teaserEpisodeName" in ecommerce:
+            epName = ecommerce["teaserEpisodeName"]
+    epString = ""
+    if epNamePrefix != "":
+        epString = "%s: " % epNamePrefix 
+    if epName != "":
+        epString = "%s%s" % (epString, epName)
+    else:
+        epName = "%s%s" % (epString, episode['headline'])
+    if epNameSuffix != "":
+        epString = "%s (%s)" % (epString, epNameSuffix)
+    return epString, info
 
 class Navigation():
     def __init__(self,db):
@@ -127,19 +177,25 @@ class Navigation():
         if totalItems > 0:
             listItems = []
             xbmcplugin.setContent(addon_handle, 'episodes')
+            xbmcplugin.setPluginCategory(addon_handle,buildDirectoryName(data))
             for episode in data['items']:
                 if self.showPremium or episode["isPremium"] == False:
                     li = xbmcgui.ListItem()
                     li.setProperty('IsPlayable', 'true')
                     videoId = episode['videoId']
                     fID = series_url.split('/')[-1]
-                    url = "{}/{}/{}?episodeId={}".format(apiBase, "module/teaserrow/format/highlight",fID, videoId)
-                    r = requests.get(url)
-                    data = r.json()
-                    epData = data["items"][0]
+                    if plotEnabled:
+                        url = "{}/{}/{}?episodeId={}".format(apiBase, "module/teaserrow/format/highlight",fID, videoId)
+                        r = requests.get(url)
+                        data = r.json()
+                        epData = data["items"][0]
+                    else:
+                        epData = episode
                     info = self.getInfoLabel(epData)
+                    epName, info = getEpName(episode, info)
+                    info['title'] = epName
                     li.setInfo('video',info)
-                    li.setLabel('%s' % (episode['headline']))
+                    li.setLabel('%s' % (epName))
                     li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id']))})
                     url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
@@ -152,20 +208,25 @@ class Navigation():
         data = r.json()
         if len(data['items']) > 0:
             xbmcplugin.setContent(addon_handle, 'episodes')
+            xbmcplugin.setPluginCategory(addon_handle,buildDirectoryName(data))
             for episode in data['items']:
                 if self.showPremium or episode["isPremium"] == False:
                     li = xbmcgui.ListItem()
                     li.setProperty('IsPlayable', 'true')
                     videoId = episode['videoId']
                     fID = series_url.split('/')[-1]
-                    url = "{}/{}/{}?episodeId={}".format(apiBase, "module/teaserrow/format/highlight",fID, videoId)
-                    r = requests.get(url)
-                    data = r.json()
-                    epData = data["items"][0]
+                    if plotEnabled:
+                        url = "{}/{}/{}?episodeId={}".format(apiBase, "module/teaserrow/format/highlight",fID, videoId)
+                        r = requests.get(url)
+                        data = r.json()
+                        epData = data["items"][0]
+                    else:
+                        epData = episode
                     info = self.getInfoLabel(epData)
-                    li.setLabel('%s' % (videoId))
+                    epName, info = getEpName(episode, info)
+                    info['title'] = epName
                     li.setInfo('video', info)
-                    li.setLabel(info['title'])
+                    li.setLabel(epName)
                     li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id']))})
                     url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
