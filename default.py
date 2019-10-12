@@ -48,6 +48,8 @@ if params:
         nav.listLiveTV()
     elif params['action'] == 'login':
         nav.login()
+    elif params['action'] == 'search':
+        nav.login()
     elif params['action'] == 'favList':
         fav = favoriten.Favoriten()
         fav.listfav()

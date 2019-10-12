@@ -4,7 +4,7 @@ import sys
 import os
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon, xbmcvfs
 import requests
-import urllib2
+import urllib as ul
 import json
 import datetime
 import time
@@ -98,7 +98,16 @@ class Navigation():
                     xbmcgui.Dialog().notification('Login erfolgreich', 'Angemeldet als "' + username + '".', icon=xbmcgui.NOTIFICATION_INFO)
                     return True
                 else:
-                    return False        
+                    return False
+                    
+    def search(self):  
+        keyboard = xbmc.Keyboard('', 'Suchbegriff')
+        keyboard.doModal()
+        if keyboard.isConfirmed() and keyboard.getText():
+            query = keyboard.getText()
+            if query != '': 
+                self.listSearchResult(query)
+                    
     def setLoginPW(self):
         keyboard = xbmc.Keyboard('', 'Passwort', True)
         keyboard.doModal(60000)
@@ -166,7 +175,12 @@ class Navigation():
         li.setLabel('LiveTV')
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                    listitem=li, isFolder=True)
-    
+                                   
+        url = common.build_url({'action': 'search'})
+        li = xbmcgui.ListItem()
+        li.setLabel('Suche')
+        xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                   listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
     def listEpisodesFromSeasonByYear(self, year, month, series_url):
@@ -233,6 +247,20 @@ class Navigation():
                                                 listitem=li, isFolder=False)
             xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)   
 
+    def listSearchResult(self, query):
+        url = "{}/search/{}".format(apiBase, ul.urlencode(query))
+        r = requests.get(url)
+        data = r.json()
+        for item in data["items"]:
+            url = common.build_url({'action': 'listPage', 'id': item['url']})
+            li = xbmcgui.ListItem(item['title'], iconImage=icon_file)
+            sid = item.sid.split("-")[-1]
+            imgurl = formatImageURL.replace("{fid}",str(sid))
+            li.setArt({'poster': imgurl})
+            xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                listitem=li, isFolder=True)
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
+        
     def listSeasonsFromSeries(self, series_url):
         url = apiBase + "/page" + series_url
         r = requests.get(url)
