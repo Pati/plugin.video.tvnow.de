@@ -41,6 +41,7 @@ def buildDirectoryName(data):
     if "ecommerce" in data and "rowName" in data["ecommerce"]:
         dirName = "%s - %s" % (dirName, data["ecommerce"]["rowName"])
     return dirName
+
 def getEpName(episode, info):
     epNameSuffix = ""
     epNamePrefix = ""
@@ -51,10 +52,10 @@ def getEpName(episode, info):
             dt = parseDateTime(ecommerce["teaserEpisodeAirtime"])
             epNameSuffix = ecommerce["teaserEpisodeAirtime"]
             if dt:
-                info["date"] = str(dt.date())
-                info["premiered"] = str(dt.date())
+                info["date"] = dt.strftime('%Y-%m-%d')
+                info["premiered"] = dt.strftime('%Y-%m-%d')
+                info["aired"] = dt.strftime('%Y-%m-%d')
                 info["dateadded"] = str(dt)
-                info["aired"] = str(dt.date())
         if "teaserEpisodeNumber" in ecommerce:
             epNamePrefix =  ecommerce["teaserEpisodeNumber"]
         if "teaserEpisodeName" in ecommerce:
@@ -98,14 +99,14 @@ class Navigation():
                     xbmcgui.Dialog().notification('Login erfolgreich', 'Angemeldet als "' + username + '".', icon=xbmcgui.NOTIFICATION_INFO)
                     return True
                 else:
-                    return False
+                    return False        
                     
-    def search(self):  
+    def search(self):
         keyboard = xbmc.Keyboard('', 'Suchbegriff')
         keyboard.doModal()
         if keyboard.isConfirmed() and keyboard.getText():
             query = keyboard.getText()
-            if query != '': 
+            if query != '':
                 self.listSearchResult(query)
                     
     def setLoginPW(self):
@@ -190,8 +191,9 @@ class Navigation():
         totalItems = len(data['items'])
         if totalItems > 0:
             listItems = []
-            xbmcplugin.setContent(addon_handle, 'episodes')
+            xbmcplugin.setContent(addon_handle, 'EPISODES')
             xbmcplugin.setPluginCategory(addon_handle,buildDirectoryName(data))
+            xbmcplugin.addSortMethod(addon_handle, xbmcplugin.SORT_METHOD_DATEADDED)
             for episode in data['items']:
                 if self.showPremium or episode["isPremium"] == False:
                     li = xbmcgui.ListItem()
@@ -210,7 +212,7 @@ class Navigation():
                     info['title'] = epName
                     li.setInfo('video',info)
                     li.setLabel('%s' % (epName))
-                    li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id']))})
+                    li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id'])), 'clearlogo': formatImageURL.replace("{fid}",str(fID))})
                     url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                 listitem=li, isFolder=False, totalItems=totalItems )
@@ -241,25 +243,25 @@ class Navigation():
                     info['title'] = epName
                     li.setInfo('video', info)
                     li.setLabel(epName)
-                    li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id']))})
+                    li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id'])), 'icon': formatImageURL.replace("{fid}",str(fID))})
                     url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                 listitem=li, isFolder=False)
             xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)   
 
     def listSearchResult(self, query):
-        url = "{}/search/{}".format(apiBase, ul.urlencode(query))
+        url = "{}/search/{}".format(apiBase, ul.quote(query))
         r = requests.get(url)
         data = r.json()
         for item in data["items"]:
             url = common.build_url({'action': 'listPage', 'id': item['url']})
             li = xbmcgui.ListItem(item['title'], iconImage=icon_file)
-            sid = item.sid.split("-")[-1]
+            sid = item['url'].split("-")[-1]
             imgurl = formatImageURL.replace("{fid}",str(sid))
             li.setArt({'poster': imgurl})
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
-        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
         
     def listSeasonsFromSeries(self, series_url):
         url = apiBase + "/page" + series_url
@@ -326,4 +328,3 @@ class Navigation():
             
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
         
-    

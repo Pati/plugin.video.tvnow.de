@@ -49,7 +49,7 @@ if params:
     elif params['action'] == 'login':
         nav.login()
     elif params['action'] == 'search':
-        nav.login()
+        nav.search()
     elif params['action'] == 'favList':
         fav = favoriten.Favoriten()
         fav.listfav()
