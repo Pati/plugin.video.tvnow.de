@@ -108,7 +108,16 @@ class TvNow:
             return m.group(1)
         return "0"
 
-
+    def checkPremium(self):
+        base64Parts = self.token.split(".")
+        token = "%s==" % base64Parts[1]
+        userData = json.loads(base64.b64decode(token))
+        if "roles" in userData and "premium" in userData["roles"]:
+            addon.setSetting('premium', "true")
+        elif "subscriptionState" in userData and (userData["subscriptionState"]==5 or userData["subscriptionState"]==4):
+            addon.setSetting('premium', "true")
+        elif "permissions" in userData and "vodPremium" in userData["permissions"] and userData["permissions"]["vodPremium"]==True:
+            addon.setSetting('premium', "true")
 
     def isLoggedIn(self):
         """Check if User is still logged in with the old Token"""
@@ -121,19 +130,11 @@ class TvNow:
             self.token = response["token"]
             self.session.headers.setdefault('x-auth-token', self.token)
             addon.setSetting('acc_token', self.token)
-            base64Parts = self.token.split(".")
-            tokendata = "%s==" % base64Parts[1]
-            userData = json.loads(base64.b64decode(tokendata))
-            if "premium" in userData["roles"]:
-                addon.setSetting('premium', "true")
-            elif "subscriptionState" in userData and (userData["subscriptionState"]==5 or userData["subscriptionState"]==4):
-                addon.setSetting('premium', "true")
-            elif "vodPremium" in userData and userData["vodPremium"]==True:
-                addon.setSetting('premium', "true")
+            self.checkPremium()
             return True
         self.session.headers.setdefault('x-auth-token', "")
         addon.setSetting('acc_token', "")
-        return False            
+        return False
 
     def sendLogin(self, username, password):
         jlogin = { "email" : username, "password": password}
@@ -150,15 +151,9 @@ class TvNow:
             self.tokenset = True
             self.session.headers.setdefault('x-auth-token', response["token"])
             self.usingAccount = True
-            
             addon.setSetting('acc_token', self.token)
-            base64Parts = self.token.split(".")
-            tokendata = "%s==" % base64Parts[1]
-            userData = json.loads(base64.b64decode(tokendata))
-            if "premium" in userData["roles"]:
-                addon.setSetting('premium', "true")
-            elif "subscriptionState" in userData and (userData["subscriptionState"]==5 or userData["subscriptionState"]==4):
-                addon.setSetting('premium', "true")
+
+            self.checkPremium()
             encpassword = encode(password)
             addon.setSetting('email', username)
             addon.setSetting('password_enc', encpassword)
