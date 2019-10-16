@@ -112,7 +112,7 @@ class Navigation():
     def setLoginPW(self):
         keyboard = xbmc.Keyboard('', 'Passwort', True)
         keyboard.doModal(60000)
-        if keyboard.isConfirmed() and keyboard.getText() and len(keyboard.getText()) > 6:
+        if keyboard.isConfirmed() and keyboard.getText() and len(keyboard.getText()) >= 6:
             password = keyboard.getText()
             return password
         return ''
