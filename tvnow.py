@@ -218,6 +218,8 @@ class TvNow:
                     li.setProperty(is_addon + '.license_type', drm)
                 li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
                 li.setProperty(is_addon + '.manifest_type', protocol)
+                if live:
+                    li.setProperty(is_addon + '.manifest_update_parameter',  "full")
                 li.setProperty('inputstreamaddon', is_addon)
                 # Start Playing
                 xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
