@@ -10,4 +10,8 @@
       <setting id="plot_enabled" type="bool" label="Handlung laden" default="true"/>
       <setting id="password_enc" type="text" option="hidden" visible="false" label="Passwort" default="" />
   </category>
+  <category label="Erweitert">
+      <setting id="patch_manifest" type="bool" label="Entferne pssh Daten aus Manifest" default="false"/>
+  </category>
+
 </settings>

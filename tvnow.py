@@ -51,7 +51,6 @@ def decode(data):
     
 licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
 addon = xbmcaddon.Addon()
-addon_handle = int(sys.argv[1])
 username = addon.getSetting('email')
 password = decode(addon.getSetting('password_enc'))
 password_old = addon.getSetting('password')
@@ -59,6 +58,7 @@ datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
 token = addon.getSetting('acc_token')
 hdEnabled = addon.getSetting('hd_enabled') == "true"
 helperActivated  = addon.getSetting('is_helper_enabled') == "true"
+patchManifest = addon.getSetting('patch_manifest') == "true"
 
 
 class TvNow:
@@ -77,7 +77,7 @@ class TvNow:
         # Create session with old cookies
         self.session = requests.session()
         self.session.headers.setdefault('User-Agent','Dalvik/2.1.0 (Linux; U; Android 7.1.1)')
-        
+
         if password_old != "":
             encpassword = encode(password_old)
             password = password_old
@@ -201,7 +201,7 @@ class TvNow:
             # Prepare new ListItem to start playback
             playBackUrl, drmProtected = self.getPlayBackUrl(assetID,live)
             if playBackUrl != "":
-                li = xbmcgui.ListItem(path=playBackUrl)
+                li = xbmcgui.ListItem()
                 protocol = 'mpd'
                 drm = 'com.widevine.alpha'
                 # Inputstream settings
@@ -216,12 +216,17 @@ class TvNow:
                         return False
                 if drmProtected:
                     li.setProperty(is_addon + '.license_type', drm)
+                    if patchManifest:
+                        live
+                        playBackUrl = "http://localhost:45678/?id={}&live={}".format(assetID, 1 if live == True else 0)
                 li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
                 li.setProperty(is_addon + '.manifest_type', protocol)
                 if live:
                     li.setProperty(is_addon + '.manifest_update_parameter',  "full")
                 li.setProperty('inputstreamaddon', is_addon)
+                li.setPath(playBackUrl)
                 # Start Playing
+                addon_handle = int(sys.argv[1])
                 xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
             else:
                 xbmcgui.Dialog().notification('Abspielen fehlgeschlagen', 'Es ist keine AbspielURL vorhanden', icon=xbmcgui.NOTIFICATION_ERROR)
