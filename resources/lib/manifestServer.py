@@ -22,8 +22,8 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 if playBackUrl != "":
                     headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
                     r = requests.get(playBackUrl,headers=headers)
-                    data = r.text #.replace('\n','').replace('\r','')
-                    data = re.sub(r'<ContentProtection[^>]*>\s*<cenc:pssh>[A-z0-9=+\s]*</cenc:pssh>\s*</ContentProtection>', '', data)
+                    data = r.text
+                    data = re.sub(r'<ContentProtection[^>]*>\s*<cenc:pssh>[^>]*</cenc:pssh>\s*</ContentProtection>', '', data)
                     basePath = "/".join(playBackUrl.split('/')[:-1])
                     data = re.sub(r'<BaseURL>([^>]*)</BaseURL>', '<BaseURL>'+basePath+r'/\1</BaseURL>', data)
                     self.send_response(200)
