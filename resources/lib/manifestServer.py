@@ -23,7 +23,7 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
                     r = requests.get(playBackUrl,headers=headers)
                     data = r.text
-                    data = re.sub(r'<ContentProtection[^>]*>\s*<cenc:pssh>[^>]*</cenc:pssh>\s*</ContentProtection>', '', data)
+                    data = re.sub(r'<ContentProtection[^>]*>\s*<(cenc:)?pssh[^>]*>[^>]*</(cenc:)?pssh>\s*</ContentProtection>', '', data)
                     basePath = "/".join(playBackUrl.split('/')[:-1])
                     data = re.sub(r'<BaseURL>([^>]*)</BaseURL>', '<BaseURL>'+basePath+r'/\1</BaseURL>', data)
                     self.send_response(200)
@@ -32,11 +32,20 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     self.wfile.write(data)
                 else:
                     self.send_response(404)
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    self.wfile.write("No playBackUrl")
+                    
             else:
                 self.send_response(403)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
         except Exception as exc:
-            self.wfile.write(str(exc))
             self.send_response(400)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(str(exc))
+            
 
     def log_message(self, *args):
         """Disable the BaseHTTPServer Log"""

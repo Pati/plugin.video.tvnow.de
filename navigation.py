@@ -275,7 +275,7 @@ class Navigation():
         #remove TVNOW and other stuff from title
         clean_title = "".join(temp[0:-1])
         xbmcplugin.setPluginCategory(addon_handle, clean_title)
-        
+        movieMetadata = False
         for module in data["modules"]:
             if module["moduleLayout"] == "default":
                 movieID = module["id"]
@@ -283,6 +283,9 @@ class Navigation():
                 modulUrl = module["moduleUrl"]
             elif module["moduleLayout"] == "format_episode":
                 series_url = module["moduleUrl"]
+            if module["moduleLayout"] == "moviemetadata":
+                movieMetadata = True
+
             
         if modulUrl != "" and series_url != "":
             xbmcplugin.setContent(addon_handle, 'seasons')
@@ -309,9 +312,12 @@ class Navigation():
                         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                         listitem=li, isFolder=True)
         elif movieID != -1:
-            url = apiBase + "/module/moviemetadata/" + str(series_id)
-            r = requests.get(url)
-            data = r.json()
+            if movieMetadata:
+                url = apiBase + "/module/moviemetadata/" + str(series_id)
+                r = requests.get(url)
+                data = r.json()
+            else:
+                 data["isPremium"] = data["configuration"]["isPremium"]
             title_stripped = data['title'].replace("im Online Stream | TVNOW","")
             xbmcplugin.setPluginCategory(addon_handle, title_stripped)
             xbmcplugin.setContent(addon_handle, 'episodes')
