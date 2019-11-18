@@ -4,7 +4,10 @@ import sys
 import os
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon, xbmcvfs
 import requests
-import urllib as ul
+try:
+    import urllib.parse as ul
+except:
+    import urllib as ul
 import json
 import datetime
 import time
@@ -16,7 +19,11 @@ apiBase = "https://apigw.tvnow.de"
 formatImageURL = "https://ais.tvnow.de/tvnow/format/{fid}_formatlogo/408x229/image.jpg"
 episodeImageURL = "https://ais.tvnow.de/tvnow/movie/{eid}/408x229/image.jpg"
 addon_handle = int(sys.argv[1])
-icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png').decode('utf-8')
+try:
+    #py2
+    icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png').decode('utf-8')
+except:
+    icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png')
 xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_NONE)
 xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_LABEL)
 addon = xbmcaddon.Addon()
@@ -296,8 +303,8 @@ class Navigation():
             for items in reversed(nav_data["items"]):
                 if "months" in items:
                     for month in reversed(items["months"]):
-                        url = common.build_url({'action': 'listSeasonByYear', 'year': items['year'], 'month': month.keys()[0] , 'id' : series_url})
-                        label = '%s - %s - %s' % (clean_title, month.values()[0], items['year'])
+                        url = common.build_url({'action': 'listSeasonByYear', 'year': items['year'], 'month': list(month.keys())[0] , 'id' : series_url})
+                        label = '%s - %s - %s' % (clean_title, list(month.values())[0], items['year'])
                         li = xbmcgui.ListItem(label=label)
                         li.setProperty('IsPlayable', 'false')
                         li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})

@@ -1,7 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 import sys
-import urlparse
+try:
+    #py2
+    import urlparse
+except:
+    #py3
+    import urllib.parse as urlparse
 import resources.lib.vod as vod
 import os
 import pickle
@@ -23,10 +29,10 @@ if os.path.isfile(dbPath):
         try:
             db = pickle.load(f)
         except:
-            print "Invalid File"
+            print ("Invalid File")
 if db.updateDatabase():
-    f = file(dbPath, "wb")
-    pickle.dump(db,f)
+    with open(dbPath, "wb") as f:
+        pickle.dump(db,f)
 
 nav = Navigation(db)
 # Router for all plugin actions

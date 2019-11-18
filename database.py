@@ -1,6 +1,6 @@
+from __future__ import print_function
 import time
 import json
-import urllib2
 import requests
 from sendung import Sendung
 s_a_z_url = "https://apigw.tvnow.de/module/teaserrow/az"
@@ -19,7 +19,7 @@ class Database():
     def updateDatabase(self, force = False):
         if time.time() - self.lastUpdate < 1800 and force == False:
             return False
-        print "Building Database"
+        print ("Building Database")
         self.database = []
         self.sAzDict = {}
         self.stationDict = {}

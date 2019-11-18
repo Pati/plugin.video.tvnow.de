@@ -1,7 +1,16 @@
-import BaseHTTPServer
+try:
+    import BaseHTTPServer
+except:
+    import http.server as BaseHTTPServer
 import requests
-from SocketServer import TCPServer
-from urlparse import urlparse, parse_qs
+try:
+    from SocketServer import TCPServer
+except:
+    from socketserver import TCPServer
+try:
+    from urlparse import urlparse, parse_qs
+except:
+    from urllib.parse import urlparse, parse_qs
 import tvnow
 import re
 
@@ -29,12 +38,15 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header('Content-type', 'application/xml')
                     self.end_headers()
+                    try:
+                        data = data.encode()
+                    except:
+                        pass
                     self.wfile.write(data)
                 else:
                     self.send_response(404)
                     self.send_header('Content-type', 'text/html')
                     self.end_headers()
-                    self.wfile.write("No playBackUrl")
                     
             else:
                 self.send_response(403)
