@@ -121,6 +121,7 @@ class TvNow:
 
     def isLoggedIn(self):
         """Check if User is still logged in with the old Token"""
+        return False
         if not self.tokenset:
             return False
         r = self.session.get('https://api.tvnow.de/v3/backend/login?fields=%5B%22id%22,%20%22token%22,%20%22user%22,%5B%22agb%22%5D%5D')
@@ -164,7 +165,7 @@ class TvNow:
         if not self.isLoggedIn():
             self.usingAccount = False
             if username != "" and password != "":
-                self.sendLogin(username, password)
+                return self.sendLogin(username, password)
             elif play:
                 token = self.getToken()
                 if token != "0":
