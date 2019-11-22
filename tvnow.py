@@ -127,9 +127,8 @@ class TvNow:
         token = "%s==" % base64Parts[1]
         userData = json.loads(base64.b64decode(token))
         if userData["exp"] > (time.time() - 60*60*24):
-            print("Still logged in")
+            self.checkPremium()
             return True
-        print("Logged out")
         return False
         r = self.session.get('https://api.tvnow.de/v3/backend/login?fields=%5B%22id%22,%20%22token%22,%20%22user%22,%5B%22agb%22%5D%5D')
         #Parse json
