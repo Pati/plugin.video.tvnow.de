@@ -126,7 +126,7 @@ class TvNow:
         base64Parts = self.token.split(".")
         token = "%s==" % base64Parts[1]
         userData = json.loads(base64.b64decode(token))
-        if userData["exp"] > (time.time() - 60*60*24):
+        if userData["exp"] > (time.time() + 60*60*24):
             self.checkPremium()
             return True
         return False
