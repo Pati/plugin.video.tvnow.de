@@ -67,6 +67,8 @@ def getEpName(episode, info):
             epNamePrefix =  ecommerce["teaserEpisodeNumber"]
         if "teaserEpisodeName" in ecommerce:
             epName = ecommerce["teaserEpisodeName"]
+        elif "teaserName" in ecommerce:
+            epName = ecommerce["teaserName"]
     epString = ""
     if epNamePrefix != "":
         epString = "%s: " % epNamePrefix 

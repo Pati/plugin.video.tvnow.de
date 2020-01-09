@@ -9,7 +9,12 @@ import datetime
 import time
 import pickle
 import os
-from pyDes import *
+try:  # Python 3
+    from Crypto.Cipher import DES3
+    from Crypto.Util.Padding import pad, unpad
+except:
+    from Cryptodome.Cipher import DES3
+    from Cryptodome.Util.Padding import pad, unpad
 import uuid
 import xml.etree.ElementTree as ET
 
@@ -38,15 +43,15 @@ def getmac():
     return uuid.uuid5(uuid.NAMESPACE_DNS, str(mac)).bytes
     
 def encode(data):
-    k = triple_des(getmac(), CBC, "\0\0\0\0\0\0\0\0", padmode=PAD_PKCS5)
-    d = k.encrypt(data)
+    k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0")
+    d = k.encrypt(pad(data,8))
     return base64.b64encode(d)
 
 def decode(data):
     if not data:
         return ''
-    k = triple_des(getmac(), CBC, "\0\0\0\0\0\0\0\0", padmode=PAD_PKCS5)
-    d = k.decrypt(base64.b64decode(data))
+    k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0")
+    d = unpad(k.decrypt(base64.b64decode(data)), 16)
     return d
     
 licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
@@ -103,7 +108,7 @@ class TvNow:
             return "0"
         endPoint = baseEndPoint + jsName
         r = requests.get(endPoint,headers=headers)
-        m = re.search(r'getDefaultUserdata=function\(\){return{token:"([A-z0-9.]+)"', r.text)
+        m = re.search(r'{return{token:"([A-z0-9.]+)"', r.text)
         if m:
             return m.group(1)
         return "0"
