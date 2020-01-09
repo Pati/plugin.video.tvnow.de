@@ -51,7 +51,7 @@ def decode(data):
     if not data:
         return ''
     k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0")
-    d = unpad(k.decrypt(base64.b64decode(data)), 16)
+    d = unpad(k.decrypt(base64.b64decode(data)), 8)
     return d
     
 licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
