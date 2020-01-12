@@ -132,7 +132,7 @@ class TvNow:
 
     def isLoggedIn(self):
         """Check if User is still logged in with the old Token"""
-        if not self.tokenset:
+        if not self.tokenset or username == "":
             return False
         base64Parts = self.token.split(".")
         token = "%s==" % base64Parts[1]
