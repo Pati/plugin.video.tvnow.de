@@ -91,7 +91,11 @@ class Navigation():
         if not data.get('year_of_production', '') == '':
             info['year'] = data.get('year_of_production', '')
         if movie:
-            info['plot'] = data.get('description', '').replace('\n', '').strip()
+            if "description" in data:
+                info['plot'] = data.get('description', '').replace('\n', '').strip()
+            elif "seo" in data:
+                info['plot'] = data["seo"].get('text', '').replace('\n', '').strip()
+                info['plot'] = re.sub('<[^<]+?>', '', info['plot'])
         else:
             info['plot'] = data.get('text', '').replace('\n', '').strip()
         return info
@@ -279,12 +283,11 @@ class Navigation():
         modulUrl = ""
         series_id = data["id"]
         series_url = ""
-        movieID = -1
-        temp = data["title"].split("-")
-        #remove TVNOW and other stuff from title
-        clean_title = "".join(temp[0:-1])
+        movieMetadataURL = -1
+        clean_title = data['title'].replace("im Online Stream ansehen | TVNOW","")
         xbmcplugin.setPluginCategory(addon_handle, clean_title)
         movieMetadata = False
+
         for module in data["modules"]:
             if module["moduleLayout"] == "default":
                 movieID = module["id"]
@@ -294,6 +297,7 @@ class Navigation():
                 series_url = module["moduleUrl"]
             if module["moduleLayout"] == "moviemetadata":
                 movieMetadata = True
+                movieMetadataURL = module["moduleUrl"]
 
             
         if modulUrl != "" and series_url != "":
@@ -320,14 +324,16 @@ class Navigation():
                         li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
                         xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                         listitem=li, isFolder=True)
-        elif movieID != -1:
+        elif movieMetadata != -1:
+            title_stripped = data['title'].replace("im Online Stream | TVNOW","")
             if movieMetadata:
-                url = apiBase + "/module/moviemetadata/" + str(series_id)
+                url = apiBase + movieMetadataURL
                 r = requests.get(url)
                 data = r.json()
+                if not "headline" in data:
+                    data["headline"] = title_stripped
             else:
                  data["isPremium"] = data["configuration"]["isPremium"]
-            title_stripped = data['title'].replace("im Online Stream | TVNOW","")
             xbmcplugin.setPluginCategory(addon_handle, title_stripped)
             xbmcplugin.setContent(addon_handle, 'episodes')
             if self.showPremium or data["isPremium"] == False:
