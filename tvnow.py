@@ -63,7 +63,6 @@ def decode(data):
 licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
 addon = xbmcaddon.Addon()
 username = addon.getSetting('email')
-password = decode(addon.getSetting('password_enc'))
 password_old = addon.getSetting('password')
 datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
 token = addon.getSetting('acc_token')
@@ -134,14 +133,27 @@ class TvNow:
         """Check if User is still logged in with the old Token"""
         if not self.tokenset or username == "":
             return False
+        loggedIn = False
         base64Parts = self.token.split(".")
         token = "%s==" % base64Parts[1]
         userData = json.loads(base64.b64decode(token))
-        if userData["exp"] > (time.time() + 60*60*24):
+
+        if "licenceEndDate" in userData:
+            licenceEndDate = userData["licenceEndDate"].split("+")[0]
+            try:
+                licenceEndDateTS = time.mktime(datetime.datetime.strptime(licenceEndDate, '%Y-%m-%dT%H:%M:%S').timetuple())
+                if licenceEndDateTS < (time.time() + 60*60*24):
+                    loggedIn = False
+            except:
+                loggedIn = False
+        else:
+            loggedIn = False
+        if loggedIn and "exp" in userData and userData["exp"] > (time.time() + 60*60*24):
             self.checkPremium()
-            return True
-        return False
-        r = self.session.get('https://api.tvnow.de/v3/backend/login?fields=%5B%22id%22,%20%22token%22,%20%22user%22,%5B%22agb%22%5D%5D')
+        else:
+            loggedIn = False
+        return loggedIn
+        '''r = self.session.get('https://api.tvnow.de/v3/backend/login?fields=%5B%22id%22,%20%22token%22,%20%22user%22,%5B%22agb%22%5D%5D')
         #Parse json
         response = json.loads(r.text)
         if r.status_code == 200 and "token" in response:
@@ -152,7 +164,7 @@ class TvNow:
             return True
         self.session.headers.setdefault('x-auth-token', "")
         addon.setSetting('acc_token', "")
-        return False
+        return False'''
 
     def sendLogin(self, username, password):
         jlogin = { "email" : username, "password": password}
@@ -176,10 +188,12 @@ class TvNow:
             addon.setSetting('email', username)
             addon.setSetting('password_enc', encpassword)
             return True
+
     def login(self, play=False):
         addon.setSetting('premium', "false")
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
+            password = decode(addon.getSetting('password_enc'))
             self.usingAccount = False
             if username != "" and password != "":
                 return self.sendLogin(username, password)
@@ -193,7 +207,6 @@ class TvNow:
                     return False
         else:
             return True
-
         # If any case is not matched return login failed
         return False
 
@@ -213,6 +226,7 @@ class TvNow:
             if "dash" in data["manifest"]: # Fallback
                 return data["manifest"]["dash"], drmProtected
         return "", drmProtected
+
 
     def play(self, assetID, live=False):
         if self.login(True):
@@ -236,7 +250,7 @@ class TvNow:
                     li.setProperty(is_addon + '.license_type', drm)
                     if patchManifest:
                         live
-                        playBackUrl = "http://localhost:45678/?id={}&live={}".format(assetID, 1 if live == True else 0)
+                        playBackUrl = "http://localhost:42467/?id={}&live={}".format(assetID, 1 if live == True else 0)
                 li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
                 li.setProperty(is_addon + '.manifest_type', protocol)
                 if live:
