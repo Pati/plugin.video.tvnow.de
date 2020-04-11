@@ -25,7 +25,7 @@ class TvNowService(object):
     def init_server(self):
         self.server['class'].allow_reuse_address = True
         self.server['instance'] = self.server['class'](
-            ('127.0.0.1', 45678))
+            ('127.0.0.1', 42467))
         self.server['thread'] = threading.Thread(
             target=self.server['instance'].serve_forever)
 
