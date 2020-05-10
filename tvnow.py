@@ -43,16 +43,16 @@ def getmac():
     return uuid.uuid5(uuid.NAMESPACE_DNS, str(mac)).bytes
     
 def encode(data):
-    k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0")
-    d = k.encrypt(pad(data,8))
+    k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0".encode("utf8"))
+    d = k.encrypt(pad(data.encode("utf8"),8))
     return base64.b64encode(d)
 
 def decode(data):
     if not data:
         return ''
-    k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0")
+    k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0".encode("utf8"))
     try:
-        d = unpad(k.decrypt(base64.b64decode(data)), 8)
+        d = unpad(k.decrypt(base64.b64decode(data)), 8).decode("utf8")
         return d
     except:
         xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
