@@ -56,7 +56,8 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_response(400)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-            self.wfile.write(str(exc))
+            data = str(exc).encode()
+            self.wfile.write(data)
             
 
     def log_message(self, *args):
