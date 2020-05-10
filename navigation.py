@@ -136,8 +136,8 @@ class Navigation():
         d = self.db.getDict(dicttype)
         for item in sorted(d.keys()):
             url = common.build_url({'action': 'listDict', 'id': item, 'dict' : dicttype})
-            li = xbmcgui.ListItem(item, iconImage=icon_file)
-            #li.setArt({'poster': formatImageURL.replace("{fid}",str(item["id"]))})
+            li = xbmcgui.ListItem(item)
+            li.setArt({'icon': icon_file})
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                     listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
@@ -146,10 +146,10 @@ class Navigation():
         d = self.db.getDict(dicttype)
         for item in d[dictkey]:
             url = common.build_url({'action': 'listPage', 'id': item.sid})
-            li = xbmcgui.ListItem(item.title, iconImage=icon_file)
+            li = xbmcgui.ListItem(item.title)
             sid = item.sid.split("-")[-1]
             imgurl = formatImageURL.replace("{fid}",str(sid))
-            li.setArt({'poster': imgurl})
+            li.setArt({'poster': imgurl, 'icon': icon_file})
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
@@ -284,10 +284,10 @@ class Navigation():
         for item in data["items"]:
             if "url" in item and "title" in item:
                 url = common.build_url({'action': 'listPage', 'id': item['url']})
-                li = xbmcgui.ListItem(item['title'], iconImage=icon_file)
+                li = xbmcgui.ListItem(item['title'])
                 sid = item['url'].split("-")[-1]
                 imgurl = formatImageURL.replace("{fid}",str(sid))
-                li.setArt({'poster': imgurl})
+                li.setArt({'poster': imgurl, 'icon' : icon_file})
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
