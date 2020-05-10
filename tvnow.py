@@ -126,8 +126,13 @@ class TvNow:
             addon.setSetting('premium', "true")
         elif "subscriptionState" in userData and (userData["subscriptionState"]==5 or userData["subscriptionState"]==4):
             addon.setSetting('premium', "true")
-        elif "permissions" in userData and "vodPremium" in userData["permissions"] and userData["permissions"]["vodPremium"]==True:
-            addon.setSetting('premium', "true")
+        if "permissions" in userData:
+            if "vodPremium" in userData["permissions"] and userData["permissions"]["vodPremium"]==True:
+                addon.setSetting('premium', "true")
+            if "livePay" in userData["permissions"] and userData["permissions"]["livePay"]==True:
+                addon.setSetting('livePay', "true")
+            if "liveFree" in userData["permissions"] and userData["permissions"]["liveFree"]==True:
+                addon.setSetting('liveFree', "true")
 
     def isLoggedIn(self):
         """Check if User is still logged in with the old Token"""
@@ -191,6 +196,8 @@ class TvNow:
 
     def login(self, play=False):
         addon.setSetting('premium', "false")
+        addon.setSetting('livePay', "false")
+        addon.setSetting('liveFree', "false")
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
             password = decode(addon.getSetting('password_enc'))

@@ -84,6 +84,8 @@ class Navigation():
     def __init__(self,db):
         self.db = db
         self.showPremium = (addon.getSetting('premium') == "true")
+        self.showlive = (addon.getSetting('liveFree') == "true")
+        self.showLivePay = (addon.getSetting('livePay') == "true")
     
     def getInfoLabel(self, data, movie=False):
         info = {}
@@ -112,7 +114,7 @@ class Navigation():
                     xbmcgui.Dialog().notification('Login erfolgreich', 'Angemeldet als "' + username + '".', icon=xbmcgui.NOTIFICATION_INFO)
                     return True
                 else:
-                    return False        
+                    return False
                     
     def search(self):
         keyboard = xbmc.Keyboard('', 'Suchbegriff')
@@ -153,24 +155,28 @@ class Navigation():
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
         
     def listLiveTV(self):
-        url = apiBase + "/module/teaserrow/epglivetv"
-        r = requests.get(url)
-        data = r.json()
-        for item in data["items"]:
-            baseJSON = item["station"][0]["now"]
-            stationName = baseJSON["station"]
-            stationID = baseJSON["id"]
-            xbmcplugin.setPluginCategory(addon_handle, "LiveTV")
-            xbmcplugin.setContent(addon_handle, 'episodes')
-            if self.showPremium:
-                url = common.build_url({'action': 'playLive', 'vod_url': stationID})
-                li = xbmcgui.ListItem()
-                li.setProperty('IsPlayable', 'true')
-                li.setInfo('video', "")
-                li.setLabel('%s' % (stationName))
-                li.setArt({'poster': baseJSON["image"][0]["src"]})
-                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                            listitem=li, isFolder=False)  
+        tvNow = tvnow.TvNow()
+        if tvNow.login():
+            url = apiBase + "/module/teaserrow/epglivetv"
+            r = requests.get(url)
+            data = r.json()
+            for item in data["items"]:
+                baseJSON = item["station"][0]["now"]
+                stationName = baseJSON["station"]
+                stationID = baseJSON["id"]
+                payTV = item["pay"]
+
+                xbmcplugin.setPluginCategory(addon_handle, "LiveTV")
+                xbmcplugin.setContent(addon_handle, 'episodes')
+                if self.showlive and (payTV == False or self.showLivePay):
+                    url = common.build_url({'action': 'playLive', 'vod_url': stationID})
+                    li = xbmcgui.ListItem()
+                    li.setProperty('IsPlayable', 'true')
+                    li.setInfo('video', "")
+                    li.setLabel('%s' % (stationName))
+                    li.setArt({'poster': baseJSON["image"][0]["src"]})
+                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                                listitem=li, isFolder=False)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
     def rootDir(self):       
@@ -197,13 +203,12 @@ class Navigation():
                                    listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
-    def listEpisodesFromSeasonByYear(self, year, month, series_url):
-        url = apiBase + series_url + "?year=" + year + '&month=' + month
+    def listEpisodesFromSeasonByYear(self, year, month, serial_url):
+        url = apiBase + serial_url + "?year=" + year + '&month=' + month
         r = requests.get(url)
         data = r.json()
         totalItems = len(data['items'])
         if totalItems > 0:
-            listItems = []
             xbmcplugin.setContent(addon_handle, 'EPISODES')
             xbmcplugin.setPluginCategory(addon_handle,buildDirectoryName(data))
             xbmcplugin.addSortMethod(addon_handle, xbmcplugin.SORT_METHOD_DATEADDED)
@@ -212,7 +217,7 @@ class Navigation():
                     li = xbmcgui.ListItem()
                     li.setProperty('IsPlayable', 'true')
                     videoId = episode['videoId']
-                    fID = series_url.split('/')[-1]
+                    fID = serial_url.split('/')[-1]
                     if plotEnabled:
                         url = "{}/{}/{}?episodeId={}".format(apiBase, "module/teaserrow/format/highlight",fID, videoId)
                         r = requests.get(url)
@@ -231,24 +236,30 @@ class Navigation():
                                                 listitem=li, isFolder=False, totalItems=totalItems )
             xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)          
 
-    def listEpisodesFromSeason(self, season_id, series_url):
-        url = apiBase + series_url + "?season=" + season_id
+    def listEpisodesFromSeason(self, season_id, serial_url):
+        url = apiBase + serial_url + "?season=" + season_id
         r = requests.get(url)
         data = r.json()
         if len(data['items']) > 0:
             xbmcplugin.setContent(addon_handle, 'episodes')
             xbmcplugin.setPluginCategory(addon_handle,buildDirectoryName(data))
             for episode in data['items']:
-                if self.showPremium or episode["isPremium"] == False:
+                if self.showPremium or not "isPremium" in episode or episode["isPremium"] == False:
                     li = xbmcgui.ListItem()
                     li.setProperty('IsPlayable', 'true')
+                    if not "videoId" in episode:
+                        continue
                     videoId = episode['videoId']
-                    fID = series_url.split('/')[-1]
+                    fID = serial_url.split('/')[-1]
                     if plotEnabled:
                         url = "{}/{}/{}?episodeId={}".format(apiBase, "module/teaserrow/format/highlight",fID, videoId)
                         r = requests.get(url)
                         data = r.json()
-                        epData = data["items"][0]
+                        if "items" in data and len(data["items"]) > 0:
+                            epData = data["items"][0]
+                        else:
+                            epData = episode
+
                     else:
                         epData = episode
                     info = self.getInfoLabel(epData)
@@ -256,7 +267,11 @@ class Navigation():
                     info['title'] = epName
                     li.setInfo('video', info)
                     li.setLabel(epName)
-                    li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id'])), 'icon': formatImageURL.replace("{fid}",str(fID))})
+                    artDict = {}
+                    artDict['icon'] = formatImageURL.replace("{fid}",str(fID))
+                    if "id" in episode:
+                        artDict['poster'] = episodeImageURL.replace("{eid}",str(episode['id']))
+                    li.setArt(artDict)
                     url = common.build_url({'action': 'playVod', 'vod_url': episode["videoId"]})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                 listitem=li, isFolder=False)
@@ -267,26 +282,31 @@ class Navigation():
         r = requests.get(url)
         data = r.json()
         for item in data["items"]:
-            url = common.build_url({'action': 'listPage', 'id': item['url']})
-            li = xbmcgui.ListItem(item['title'], iconImage=icon_file)
-            sid = item['url'].split("-")[-1]
-            imgurl = formatImageURL.replace("{fid}",str(sid))
-            li.setArt({'poster': imgurl})
-            xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+            if "url" in item and "title" in item:
+                url = common.build_url({'action': 'listPage', 'id': item['url']})
+                li = xbmcgui.ListItem(item['title'], iconImage=icon_file)
+                sid = item['url'].split("-")[-1]
+                imgurl = formatImageURL.replace("{fid}",str(sid))
+                li.setArt({'poster': imgurl})
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
-        
-    def listSeasonsFromSeries(self, series_url):
-        url = apiBase + "/page" + series_url
+
+    def listSeasonsFromserial(self, serial_url):
+        modulUrl = ""
+        clean_title = "<No Title>"
+        movieMetadata = False
+        movieMetadataURL = -1
+        movieID = -1
+        url = apiBase + "/page" + serial_url
         r = requests.get(url)
         data = r.json()
-        modulUrl = ""
-        series_id = data["id"]
-        series_url = ""
-        movieMetadataURL = -1
-        clean_title = data['title'].replace("im Online Stream ansehen | TVNOW","")
-        xbmcplugin.setPluginCategory(addon_handle, clean_title)
-        movieMetadata = False
+        serial_url = ""
+        if "title" in data:
+            clean_title = data['title'].replace("im Online Stream ansehen | TVNOW","")
+            xbmcplugin.setPluginCategory(addon_handle, clean_title)
+
+
 
         for module in data["modules"]:
             if module["moduleLayout"] == "default":
@@ -294,58 +314,66 @@ class Navigation():
             if module["moduleLayout"] == "format_season_navigation" :
                 modulUrl = module["moduleUrl"]
             elif module["moduleLayout"] == "format_episode":
-                series_url = module["moduleUrl"]
+                serial_url = module["moduleUrl"]
             if module["moduleLayout"] == "moviemetadata":
                 movieMetadata = True
                 movieMetadataURL = module["moduleUrl"]
 
-            
-        if modulUrl != "" and series_url != "":
-            xbmcplugin.setContent(addon_handle, 'seasons')
-            url = apiBase + modulUrl
-            r = requests.get(url)
-            nav_data = r.json()
-            
-            for items in reversed(nav_data["items"]):
-                if "months" in items:
-                    for month in reversed(items["months"]):
-                        url = common.build_url({'action': 'listSeasonByYear', 'year': items['year'], 'month': list(month.keys())[0] , 'id' : series_url})
-                        label = '%s - %s - %s' % (clean_title, list(month.values())[0], items['year'])
-                        li = xbmcgui.ListItem(label=label)
-                        li.setProperty('IsPlayable', 'false')
-                        li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
-                        xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                                        listitem=li, isFolder=True)
-                elif "season" in items:
-                        url = common.build_url({'action': 'listSeason', 'season_id': items["season"], 'id' : series_url})
-                        label = '%s - Staffel %s' % (clean_title, items["season"])
-                        li = xbmcgui.ListItem(label=label)
-                        li.setProperty('IsPlayable', 'false')
-                        li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
-                        xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                                        listitem=li, isFolder=True)
-        elif movieMetadata != -1:
-            title_stripped = data['title'].replace("im Online Stream | TVNOW","")
-            if movieMetadata:
-                url = apiBase + movieMetadataURL
+        if "id" in data:
+            serial_id = data["id"]
+
+            if modulUrl != "" and serial_url != "":
+                xbmcplugin.setContent(addon_handle, 'seasons')
+                url = apiBase + modulUrl
                 r = requests.get(url)
-                data = r.json()
-                if not "headline" in data:
-                    data["headline"] = title_stripped
-            else:
-                 data["isPremium"] = data["configuration"]["isPremium"]
-            xbmcplugin.setPluginCategory(addon_handle, title_stripped)
-            xbmcplugin.setContent(addon_handle, 'episodes')
-            if self.showPremium or data["isPremium"] == False:
-                url = common.build_url({'action': 'playVod', 'vod_url': movieID})
-                li = xbmcgui.ListItem()
-                li.setProperty('IsPlayable', 'true')
-                li.setLabel('%s' % (title_stripped))
-                info = self.getInfoLabel(data, True)
-                li.setInfo('video', info)
-                li.setArt({'poster': formatImageURL.replace("{fid}",str(series_id))})
-                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                            listitem=li, isFolder=False)
+                nav_data = r.json()
+
+                for items in reversed(nav_data["items"]):
+                    if "months" in items and "year" in items:
+                        for month in reversed(items["months"]):
+                            url = common.build_url({'action': 'listSeasonByYear', 'year': items['year'], 'month': list(month.keys())[0] , 'id' : serial_url})
+                            label = '%s - %s - %s' % (clean_title, list(month.values())[0], items['year'])
+                            li = xbmcgui.ListItem(label=label)
+                            li.setProperty('IsPlayable', 'false')
+                            li.setArt({'poster': formatImageURL.replace("{fid}",str(serial_id))})
+                            xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                                            listitem=li, isFolder=True)
+                    elif "season" in items:
+                            url = common.build_url({'action': 'listSeason', 'season_id': items["season"], 'id' : serial_url})
+                            label = '%s - Staffel %s' % (clean_title, items["season"])
+                            li = xbmcgui.ListItem(label=label)
+                            li.setProperty('IsPlayable', 'false')
+                            li.setArt({'poster': formatImageURL.replace("{fid}",str(serial_id))})
+                            xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                                            listitem=li, isFolder=True)
+            elif movieMetadata != -1 and movieID != -1:
+                if "title" in data:
+                    title_stripped = data['title'].replace("im Online Stream | TVNOW","")
+                else:
+                    title_stripped = "<No Title>"
+                if movieMetadata:
+                    url = apiBase + movieMetadataURL
+                    r = requests.get(url)
+                    data = r.json()
+                    if not "headline" in data:
+                        data["headline"] = title_stripped
+                else:
+                    if "configuration" in data and "isPremium" in data["configuration"]:
+                        data["isPremium"] = data["configuration"]["isPremium"]
+                    else: #Fallback
+                        data["isPremium"] = False
+                xbmcplugin.setPluginCategory(addon_handle, title_stripped)
+                xbmcplugin.setContent(addon_handle, 'episodes')
+                if self.showPremium or not "isPremium" in data or data["isPremium"] == False:
+                    url = common.build_url({'action': 'playVod', 'vod_url': movieID})
+                    li = xbmcgui.ListItem()
+                    li.setProperty('IsPlayable', 'true')
+                    li.setLabel('%s' % (title_stripped))
+                    info = self.getInfoLabel(data, True)
+                    li.setInfo('video', info)
+                    li.setArt({'poster': formatImageURL.replace("{fid}",str(serial_id))})
+                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                                listitem=li, isFolder=False)
             
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
         

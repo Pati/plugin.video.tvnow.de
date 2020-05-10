@@ -37,13 +37,12 @@ if db.updateDatabase():
 nav = Navigation(db)
 # Router for all plugin actions
 if params:
-
     if params['action'] == 'playVod':
         vod.playAsset(params['vod_url'])
     if params['action'] == 'playLive':
         vod.playLive(params['vod_url'])
     elif params['action'] == 'listPage':
-        nav.listSeasonsFromSeries(params['id'])
+        nav.listSeasonsFromserial(params['id'])
     elif params['action'] == 'listSeason':
         nav.listEpisodesFromSeason(params['season_id'], params['id'])
     elif params['action'] == 'listDict':
