@@ -3,6 +3,8 @@
   <category label="Login">
       <setting id="set_login" type="action" label="Anmelden..." action="RunPlugin(plugin://plugin.video.tvnow.de/?action=login)" option="close"/>
       <setting id="premium" type="bool" visible="false" label=""  default="false"/>
+      <setting id="liveFree" type="bool" visible="false" label=""  default="false"/>
+      <setting id="livePay" type="bool" visible="false" label=""  default="false"/>
       <setting id="acc_token" type="text" visible="false" label=""  default=""/>
       <setting id="email" type="text" label="Angemeldet als" enable="!eq(0,)" default="" subsetting="true" />
       <setting id="hd_enabled" type="bool" label="HD" default="true"/>
