@@ -56,47 +56,42 @@ def decode(data):
         return d
     except:
         xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
+        addon = xbmcaddon.Addon()
         addon.setSetting('password_enc', "")
         addon.setSetting('email', "")
         return ""
     
-licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
-addon = xbmcaddon.Addon()
-username = addon.getSetting('email')
-password_old = addon.getSetting('password')
-datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
-token = addon.getSetting('acc_token')
-hdEnabled = addon.getSetting('hd_enabled') == "true"
-helperActivated  = addon.getSetting('is_helper_enabled') == "true"
-patchManifest = addon.getSetting('patch_manifest') == "true"
+
 
 
 class TvNow:
     """TvNow Class"""
 
-    entitlements = []
-
-
     def __init__(self):
-        self.sessionId = ''
-        self.licence_url = licence_url
         self.tokenset = False
-        self.token = ''
         self.usingAccount = False
+        self.licence_url = 'https://widevine.tvnow.de/index/proxy/|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
+        self.addon = xbmcaddon.Addon()
+        self.username = self.addon.getSetting('email')
+        self.password_old = self.addon.getSetting('password')
+        self.datapath = xbmc.translatePath(self.addon.getAddonInfo('profile'))
+        self.token = self.addon.getSetting('acc_token')
+        self.hdEnabled = self.addon.getSetting('hd_enabled') == "true"
+        self.helperActivated  = self.addon.getSetting('is_helper_enabled') == "true"
+        self.patchManifest = self.addon.getSetting('patch_manifest') == "true"
 
         # Create session with old cookies
         self.session = requests.session()
         self.session.headers.setdefault('User-Agent','Dalvik/2.1.0 (Linux; U; Android 7.1.1)')
 
-        if password_old != "":
-            encpassword = encode(password_old)
-            password = password_old
-            addon.setSetting('password_enc', encpassword)
-            addon.setSetting('password', "")
-            self.sendLogin(username, password)
+        if self.password_old != "":
+            encpassword = encode(self.password_old)
+            password = self.password_old
+            self.addon.setSetting('password_enc', encpassword)
+            self.addon.setSetting('password', "")
+            self.sendLogin(self.username, password)
 
-        if token != "":
-            self.token = token
+        if self.token != "":
             self.tokenset = True
             self.session.headers.setdefault('x-auth-token', self.token )
         else:
@@ -123,20 +118,20 @@ class TvNow:
         token = "%s==" % base64Parts[1]
         userData = json.loads(base64.b64decode(token))
         if "roles" in userData and "premium" in userData["roles"]:
-            addon.setSetting('premium', "true")
+            self.addon.setSetting('premium', "true")
         elif "subscriptionState" in userData and (userData["subscriptionState"]==5 or userData["subscriptionState"]==4):
-            addon.setSetting('premium', "true")
+            self.addon.setSetting('premium', "true")
         if "permissions" in userData:
             if "vodPremium" in userData["permissions"] and userData["permissions"]["vodPremium"]==True:
-                addon.setSetting('premium', "true")
+                self.addon.setSetting('premium', "true")
             if "livePay" in userData["permissions"] and userData["permissions"]["livePay"]==True:
-                addon.setSetting('livePay', "true")
+                self.addon.setSetting('livePay', "true")
             if "liveFree" in userData["permissions"] and userData["permissions"]["liveFree"]==True:
-                addon.setSetting('liveFree', "true")
+                self.addon.setSetting('liveFree', "true")
 
     def isLoggedIn(self):
         """Check if User is still logged in with the old Token"""
-        if not self.tokenset or username == "":
+        if not self.tokenset or self.username == "":
             return False
         loggedIn = False
         base64Parts = self.token.split(".")
@@ -186,24 +181,24 @@ class TvNow:
             self.tokenset = True
             self.session.headers.setdefault('x-auth-token', response["token"])
             self.usingAccount = True
-            addon.setSetting('acc_token', self.token)
+            self.addon.setSetting('acc_token', self.token)
 
             self.checkPremium()
             encpassword = encode(password)
-            addon.setSetting('email', username)
-            addon.setSetting('password_enc', encpassword)
+            self.addon.setSetting('email', username)
+            self.addon.setSetting('password_enc', encpassword)
             return True
 
     def login(self, play=False):
-        addon.setSetting('premium', "false")
-        addon.setSetting('livePay', "false")
-        addon.setSetting('liveFree', "false")
+        self.addon.setSetting('premium', "false")
+        self.addon.setSetting('livePay', "false")
+        self.addon.setSetting('liveFree', "false")
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
-            password = decode(addon.getSetting('password_enc'))
+            password = decode(self.addon.getSetting('password_enc'))
             self.usingAccount = False
-            if username != "" and password != "":
-                return self.sendLogin(username, password)
+            if self.username != "" and password != "":
+                return self.sendLogin(self.username, password)
             elif play:
                 token = self.getToken()
                 if token != "0":
@@ -228,7 +223,7 @@ class TvNow:
         if "rights" in data and "isDrm" in data["rights"]:
             drmProtected = data["rights"]["isDrm"]
         if "manifest" in data:
-            if "dashhd" in data["manifest"] and hdEnabled:
+            if "dashhd" in data["manifest"] and self.hdEnabled:
                 return data["manifest"]["dashhd"], drmProtected
             if "dash" in data["manifest"]: # Fallback
                 return data["manifest"]["dash"], drmProtected
@@ -244,7 +239,7 @@ class TvNow:
                 protocol = 'mpd'
                 drm = 'com.widevine.alpha'
                 # Inputstream settings
-                if helperActivated and drmProtected:
+                if self.helperActivated and drmProtected:
                     is_helper = inputstreamhelper.Helper(protocol, drm=drm)
                     if is_helper.check_inputstream():
                         is_addon = is_helper.inputstream_addon
@@ -255,7 +250,7 @@ class TvNow:
                         return False
                 if drmProtected:
                     li.setProperty(is_addon + '.license_type', drm)
-                    if patchManifest:
+                    if self.patchManifest:
                         live
                         playBackUrl = "http://localhost:42467/?id={}&live={}".format(assetID, 1 if live == True else 0)
                 li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
