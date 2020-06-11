@@ -262,7 +262,7 @@ class TvNow:
                 li.setProperty(is_addon + '.manifest_type', protocol)
                 if live:
                     li.setProperty(is_addon + '.manifest_update_parameter',  "full")
-                li.setProperty('inputstreamaddon', is_addon)
+                li.setProperty('inputstream', is_addon)
                 li.setPath(playBackUrl)
                 # Start Playing
                 addon_handle = int(sys.argv[1])
