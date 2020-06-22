@@ -214,9 +214,9 @@ class TvNow:
 
     def getPlayBackUrl(self,assetID, live = False):
         if live:
-            url = "https://apigw.tvnow.de/module/player/epg/%d?drm=1" % int(assetID)
+            url = "https://bff.apigw.tvnow.de/module/player/epg/%d?drm=1" % int(assetID)
         else:
-            url = "https://apigw.tvnow.de/module/player/%d" % int(assetID)
+            url = "https://bff.apigw.tvnow.de/module/player/%d" % int(assetID)
         r = self.session.get(url)
         data = r.json()
         drmProtected = False

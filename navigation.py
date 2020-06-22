@@ -15,7 +15,7 @@ import re
 import resources.lib.common as common
 from sendung import Sendung
 import tvnow
-apiBase = "https://apigw.tvnow.de"
+apiBase = "https://bff.apigw.tvnow.de"
 formatImageURL = "https://ais.tvnow.de/tvnow/format/{fid}_formatlogo/408x229/image.jpg"
 episodeImageURL = "https://ais.tvnow.de/tvnow/movie/{eid}/408x229/image.jpg"
 addon_handle = int(sys.argv[1])

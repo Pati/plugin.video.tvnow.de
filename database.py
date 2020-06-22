@@ -3,7 +3,7 @@ import time
 import json
 import requests
 from sendung import Sendung
-s_a_z_url = "https://apigw.tvnow.de/module/teaserrow/az"
+s_a_z_url = "https://bff.apigw.tvnow.de/module/teaserrow/az"
 class Database():
     def __init__(self):
         self.database = []
