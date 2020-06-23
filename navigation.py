@@ -89,7 +89,7 @@ class Navigation():
     
     def getInfoLabel(self, data, movie=False):
         info = {}
-        info['title'] = data.get('headline', '') 
+        info['title'] = data.get('headline', '')
         if not data.get('year_of_production', '') == '':
             info['year'] = data.get('year_of_production', '')
         if movie:
@@ -354,7 +354,8 @@ class Navigation():
                 if movieMetadata:
                     url = apiBase + movieMetadataURL
                     r = requests.get(url)
-                    data = r.json()
+                    if r.status_code == 200:
+                        data = r.json()
                     if not "headline" in data:
                         data["headline"] = title_stripped
                 else:
