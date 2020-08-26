@@ -222,12 +222,12 @@ class TvNow:
         drmProtected = False
         if "rights" in data and "isDrm" in data["rights"]:
             drmProtected = data["rights"]["isDrm"]
-        if "videoSource" in data:
-            if "streams" in data["videoSource"]:
-                if "dashHdUrl" in data["videoSource"]["streams"] and self.hdEnabled:
-                    return data["videoSource"]["streams"]["dashHdUrl"], drmProtected
-                if "dashUrl" in data["videoSource"]["streams"]: # Fallback
-                    return data["videoSource"]["streams"]["dashUrl"], drmProtected
+        if "videoSource" in data["videoConfig"]:
+            if "streams" in data["videoConfig"]["videoSource"]:
+                if "dashHdUrl" in data["videoConfig"]["videoSource"]["streams"] and self.hdEnabled:
+                    return data["videoConfig"]["videoSource"]["streams"]["dashHdUrl"], drmProtected
+                if "dashUrl" in data["videoConfig"]["videoSource"]["streams"]: # Fallback
+                    return data["videoConfig"]["videoSource"]["streams"]["dashUrl"], drmProtected
         return "", drmProtected
 
 
