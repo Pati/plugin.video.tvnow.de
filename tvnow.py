@@ -220,7 +220,7 @@ class TvNow:
         r = self.session.get(url)
         data = r.json()
         drmProtected = False
-        if "videoSource" in data["videoConfig"]:
+        if "videoConfig" in data and "videoSource" in data["videoConfig"]:
             if "drm" in data["videoConfig"]["videoSource"]:
                 drmProtected = True
             if "streams" in data["videoConfig"]["videoSource"]:
