@@ -102,7 +102,7 @@ class TvNow:
         endPoint = baseEndPoint
         headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
         r = requests.get(endPoint,headers=headers)
-        try: jsName = re.findall(r'<script src="(main\-[A-z0-9]+\.[A-z0-9]+\.js)"', r.text, re.S)[-1]
+        try: jsName = re.findall(r'<script src="(main[A-z0-9\-\.]+\.js)"', r.text, re.S)[-1]
         except:
             xbmcgui.Dialog().notification('Fehler GetToken', 'JS not found', icon=xbmcgui.NOTIFICATION_ERROR)
             return "0"
