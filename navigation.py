@@ -135,7 +135,7 @@ class Navigation():
     def listDictCategories(self, dicttype=""):
         d = self.db.getDict(dicttype)
         for item in sorted(d.keys()):
-            url = common.build_url({'action': 'listDict', 'id': item, 'dict' : dicttype})
+            url = common.build_url({'action': 'listDict'.encode('utf-8'), 'id': item, 'dict'.encode('utf-8') : dicttype.encode('utf-8')})
             li = xbmcgui.ListItem(item)
             li.setArt({'icon': icon_file})
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
@@ -145,7 +145,7 @@ class Navigation():
     def listDict(self, dictkey,dicttype=""):
         d = self.db.getDict(dicttype)
         for item in d[dictkey]:
-            url = common.build_url({'action': 'listPage', 'id': item.sid})
+            url = common.build_url({'action': 'listPage'.encode('utf-8'), 'id': item.sid.encode('utf-8')})
             li = xbmcgui.ListItem(item.title)
             sid = item.sid.split("-")[-1]
             imgurl = formatImageURL.replace("{fid}",str(sid))
@@ -283,7 +283,7 @@ class Navigation():
         data = r.json()
         for item in data["items"]:
             if "url" in item and "title" in item:
-                url = common.build_url({'action': 'listPage', 'id': item['url']})
+                url = common.build_url({'action': 'listPage'.encode('utf-8'), 'id': item['url'].encode('utf-8')})
                 li = xbmcgui.ListItem(item['title'])
                 sid = item['url'].split("-")[-1]
                 imgurl = formatImageURL.replace("{fid}",str(sid))
@@ -331,7 +331,7 @@ class Navigation():
                 for items in reversed(nav_data["items"]):
                     if "months" in items and "year" in items:
                         for month in reversed(items["months"]):
-                            url = common.build_url({'action': 'listSeasonByYear', 'year': items['year'], 'month': list(month.keys())[0] , 'id' : serial_url})
+                            url = common.build_url({'action': 'listSeasonByYear', 'year': int(items['year']), 'month': int(list(month.keys())[0]) , 'id' : serial_url.encode('utf-8')})
                             label = '%s - %s - %s' % (clean_title, list(month.values())[0], items['year'])
                             li = xbmcgui.ListItem(label=label)
                             li.setProperty('IsPlayable', 'false')
@@ -339,7 +339,7 @@ class Navigation():
                             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                             listitem=li, isFolder=True)
                     elif "season" in items:
-                            url = common.build_url({'action': 'listSeason', 'season_id': items["season"], 'id' : serial_url})
+                            url = common.build_url({'action': 'listSeason'.encode('utf-8'), 'season_id': int(items["season"]), 'id' : serial_url.encode('utf-8')})
                             label = '%s - Staffel %s' % (clean_title, items["season"])
                             li = xbmcgui.ListItem(label=label)
                             li.setProperty('IsPlayable', 'false')
