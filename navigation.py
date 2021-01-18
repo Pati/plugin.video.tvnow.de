@@ -328,11 +328,11 @@ class Navigation():
                 r = requests.get(url)
                 nav_data = r.json()
 
-                for items in reversed(nav_data["items"]):
+                for items in nav_data["items"]:
                     if "months" in items and "year" in items:
                         for month in reversed(items["months"]):
-                            url = common.build_url({'action': 'listSeasonByYear', 'year': int(items['year']), 'month': int(list(month.keys())[0]) , 'id' : serial_url.encode('utf-8')})
-                            label = '%s - %s - %s' % (clean_title, list(month.values())[0], items['year'])
+                            url = common.build_url({'action': 'listSeasonByYear', 'year': int(items['year']), 'month': month["month"] , 'id' : serial_url.encode('utf-8')})
+                            label = '%s - %s - %s' % (clean_title, month["name"], items['year'])
                             li = xbmcgui.ListItem(label=label)
                             li.setProperty('IsPlayable', 'false')
                             li.setArt({'poster': formatImageURL.replace("{fid}",str(serial_id))})
