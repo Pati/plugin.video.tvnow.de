@@ -24,8 +24,8 @@ try:
     icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png').decode('utf-8')
 except:
     icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png')
-xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_NONE)
-xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_LABEL)
+#xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_NONE)
+#xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_LABEL)
 addon = xbmcaddon.Addon()
 plotEnabled = addon.getSetting('plot_enabled') == "true"
 
@@ -63,12 +63,21 @@ def getEpName(episode, info):
                 info["premiered"] = dt.strftime('%Y-%m-%d')
                 info["aired"] = dt.strftime('%Y-%m-%d')
                 info["dateadded"] = str(dt)
+        if "teaserSeason" in ecommerce:
+            info['season'] = re.search('(\d+)', ecommerce["teaserSeason"]).group(1)
         if "teaserEpisodeNumber" in ecommerce:
             epNamePrefix =  ecommerce["teaserEpisodeNumber"]
+            info['episode'] = re.search('(\d+)', ecommerce["teaserEpisodeNumber"]).group(1)
         if "teaserEpisodeName" in ecommerce:
             epName = ecommerce["teaserEpisodeName"]
+            info['title'] = ecommerce["teaserEpisodeName"]
         elif "teaserName" in ecommerce:
             epName = ecommerce["teaserName"]
+            info['title'] = ecommerce["teaserName"]
+        if "teaserFormatName" in ecommerce:
+            info['tvShowTitle'] = ecommerce["teaserFormatName"]
+        if "type" in episode and episode["type"].lower() == "serie":
+            info['mediatype'] = "episode"
     epString = ""
     if epNamePrefix != "":
         epString = "%s: " % epNamePrefix 
@@ -211,7 +220,7 @@ class Navigation():
         if totalItems > 0:
             xbmcplugin.setContent(addon_handle, 'EPISODES')
             xbmcplugin.setPluginCategory(addon_handle,buildDirectoryName(data))
-            xbmcplugin.addSortMethod(addon_handle, xbmcplugin.SORT_METHOD_DATEADDED)
+            #xbmcplugin.addSortMethod(addon_handle, xbmcplugin.SORT_METHOD_DATEADDED)
             for episode in data['items']:
                 if self.showPremium or episode["isPremium"] == False:
                     li = xbmcgui.ListItem()
@@ -227,7 +236,6 @@ class Navigation():
                         epData = episode
                     info = self.getInfoLabel(epData)
                     epName, info = getEpName(episode, info)
-                    info['title'] = epName
                     li.setInfo('video',info)
                     li.setLabel('%s' % (epName))
                     li.setArt({'poster': episodeImageURL.replace("{eid}",str(episode['id'])), 'clearlogo': formatImageURL.replace("{fid}",str(fID))})
@@ -264,7 +272,6 @@ class Navigation():
                         epData = episode
                     info = self.getInfoLabel(epData)
                     epName, info = getEpName(episode, info)
-                    info['title'] = epName
                     li.setInfo('video', info)
                     li.setLabel(epName)
                     artDict = {}
