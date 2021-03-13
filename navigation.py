@@ -64,10 +64,14 @@ def getEpName(episode, info):
                 info["aired"] = dt.strftime('%Y-%m-%d')
                 info["dateadded"] = str(dt)
         if "teaserSeason" in ecommerce:
-            info['season'] = re.search('(\d+)', ecommerce["teaserSeason"]).group(1)
+            match = re.search('(\d+)', ecommerce["teaserSeason"])
+            if match:
+                info['season'] = match.group(1)
         if "teaserEpisodeNumber" in ecommerce:
             epNamePrefix =  ecommerce["teaserEpisodeNumber"]
-            info['episode'] = re.search('(\d+)', ecommerce["teaserEpisodeNumber"]).group(1)
+            match = re.search('(\d+)', ecommerce["teaserEpisodeNumber"])
+            if match:
+                info['episode'] = match.group(1)
         if "teaserEpisodeName" in ecommerce:
             epName = ecommerce["teaserEpisodeName"]
             info['title'] = ecommerce["teaserEpisodeName"]
