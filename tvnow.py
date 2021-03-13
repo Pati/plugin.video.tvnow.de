@@ -174,6 +174,7 @@ class TvNow:
         response = json.loads(response)
         statuscode = r.status_code
         if statuscode != 200:
+            xbmc.log("Login Error: {}".format(response), level=xbmc.LOGERROR)
             xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
             return False
         elif "token" in response:
