@@ -97,21 +97,13 @@ class TvNow:
         else:
             self.login()
         
-    def getToken(self):
-        baseEndPoint = "https://www.tvnow.de/"
-        endPoint = baseEndPoint
-        headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
-        r = requests.get(endPoint,headers=headers)
-        try: jsName = re.findall(r'<script src="(main[A-z0-9\-\.]+\.js)"', r.text, re.S)[-1]
-        except:
-            xbmcgui.Dialog().notification('Fehler GetToken', 'JS not found', icon=xbmcgui.NOTIFICATION_ERROR)
-            return "0"
-        endPoint = baseEndPoint + jsName
-        r = requests.get(endPoint,headers=headers)
-        m = re.search(r'{return{token:"([A-z0-9.]+)"', r.text)
-        if m:
-            return m.group(1)
-        return "0"
+    def getToken(self, data):
+        if not "pageConfig" in data or not "user" in data["pageConfig"] or not "jwt" in data["pageConfig"]["user"]:
+            xbmcgui.Dialog().notification('Fehler GetToken', 'Token not found', icon=xbmcgui.NOTIFICATION_ERROR)
+            return False
+        self.token = data["pageConfig"]["user"]["jwt"]
+        print(self.token)
+        return True
 
     def checkPremium(self):
         base64Parts = self.token.split(".")
@@ -190,7 +182,7 @@ class TvNow:
             self.addon.setSetting('password_enc', encpassword)
             return True
 
-    def login(self, play=False):
+    def login(self):
         self.addon.setSetting('premium', "false")
         self.addon.setSetting('livePay', "false")
         self.addon.setSetting('liveFree', "false")
@@ -200,20 +192,12 @@ class TvNow:
             self.usingAccount = False
             if self.username != "" and password != "":
                 return self.sendLogin(self.username, password)
-            elif play:
-                token = self.getToken()
-                if token != "0":
-                    self.token = token
-                    return True
-                else:
-                    xbmcgui.Dialog().notification('Fehler', 'Token not found', icon=xbmcgui.NOTIFICATION_ERROR)
-                    return False
         else:
             return True
         # If any case is not matched return login failed
         return False
 
-    def getPlayBackUrl(self,assetID, live = False):
+    def getPlayBackUrl(self, assetID, loggedIn, live = False):
         if live:
             url = "https://bff.apigw.tvnow.de/module/player/epg/%d?drm=1" % int(assetID)
         else:
@@ -224,6 +208,8 @@ class TvNow:
         if "videoConfig" in data and "videoSource" in data["videoConfig"]:
             if "drm" in data["videoConfig"]["videoSource"]:
                 drmProtected = True
+            if drmProtected and not loggedIn:
+                self.getToken(data)
             if "streams" in data["videoConfig"]["videoSource"]:
                 if "dashHdUrl" in data["videoConfig"]["videoSource"]["streams"] and self.hdEnabled:
                     return data["videoConfig"]["videoSource"]["streams"]["dashHdUrl"], drmProtected
@@ -233,37 +219,37 @@ class TvNow:
 
 
     def play(self, assetID, live=False):
-        if self.login(True):
-            # Prepare new ListItem to start playback
-            playBackUrl, drmProtected = self.getPlayBackUrl(assetID,live)
-            if playBackUrl != "":
-                li = xbmcgui.ListItem()
-                protocol = 'mpd'
-                drm = 'com.widevine.alpha'
-                # Inputstream settings
-                if self.helperActivated and drmProtected:
-                    is_helper = inputstreamhelper.Helper(protocol, drm=drm)
-                    if is_helper.check_inputstream():
-                        is_addon = is_helper.inputstream_addon
-                else:
-                    is_addon = getInputstreamAddon()
-                    if not is_addon:
-                        xbmcgui.Dialog().notification('TvNow Fehler', 'Inputstream Addon fehlt!', xbmcgui.NOTIFICATION_ERROR, 2000, True)
-                        return False
-                if drmProtected:
-                    li.setProperty(is_addon + '.license_type', drm)
-                    if self.patchManifest:
-                        live
-                        playBackUrl = "http://localhost:42467/?id={}&live={}".format(assetID, 1 if live == True else 0)
-                li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
-                li.setProperty(is_addon + '.manifest_type', protocol)
-                if live:
-                    li.setProperty(is_addon + '.manifest_update_parameter',  "full")
-                li.setProperty('inputstreamaddon', is_addon)
-                li.setPath(playBackUrl)
-                # Start Playing
-                addon_handle = int(sys.argv[1])
-                xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+        loggedIn = self.login()
+        # Prepare new ListItem to start playback
+        playBackUrl, drmProtected = self.getPlayBackUrl(assetID, loggedIn, live)
+        if playBackUrl != "":
+            li = xbmcgui.ListItem()
+            protocol = 'mpd'
+            drm = 'com.widevine.alpha'
+            # Inputstream settings
+            if self.helperActivated and drmProtected:
+                is_helper = inputstreamhelper.Helper(protocol, drm=drm)
+                if is_helper.check_inputstream():
+                    is_addon = is_helper.inputstream_addon
             else:
-                xbmcgui.Dialog().notification('Abspielen fehlgeschlagen', 'Es ist keine AbspielURL vorhanden', icon=xbmcgui.NOTIFICATION_ERROR)
+                is_addon = getInputstreamAddon()
+                if not is_addon:
+                    xbmcgui.Dialog().notification('TvNow Fehler', 'Inputstream Addon fehlt!', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+                    return False
+            if drmProtected:
+                li.setProperty(is_addon + '.license_type', drm)
+                if self.patchManifest:
+                    live
+                    playBackUrl = "http://localhost:42467/?id={}&live={}".format(assetID, 1 if live == True else 0)
+            li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
+            li.setProperty(is_addon + '.manifest_type', protocol)
+            if live:
+                li.setProperty(is_addon + '.manifest_update_parameter',  "full")
+            li.setProperty('inputstreamaddon', is_addon)
+            li.setPath(playBackUrl)
+            # Start Playing
+            addon_handle = int(sys.argv[1])
+            xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+        else:
+            xbmcgui.Dialog().notification('Abspielen fehlgeschlagen', 'Es ist keine AbspielURL vorhanden', icon=xbmcgui.NOTIFICATION_ERROR)
 
