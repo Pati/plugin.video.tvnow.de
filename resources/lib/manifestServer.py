@@ -26,38 +26,32 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         try:
             params = parse_qs(urlparse(self.path).query)
             TvNow = tvnow.TvNow()
-            if TvNow.login(True):
-                playBackUrl, drmProtected = TvNow.getPlayBackUrl(int(params['id'][0]),int(params['live'][0]) == 1)
-                if playBackUrl != "":
-                    headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
-                    r = requests.get(playBackUrl,headers=headers)
-                    data = r.text
-                    data = re.sub(r'<ContentProtection[^>]*>\s*<(cenc:)?pssh[^>]*>[^>]*</(cenc:)?pssh>\s*</ContentProtection>', '', data)
-                    basePath = "/".join(playBackUrl.split('/')[:-1])
-                    data = re.sub(r'<BaseURL>([^>]*)</BaseURL>', '<BaseURL>'+basePath+r'/\1</BaseURL>', data)
-                    self.send_response(200)
-                    self.send_header('Content-type', 'application/xml')
-                    self.end_headers()
-                    try:
-                        data = data.encode()
-                    except:
-                        pass
-                    self.wfile.write(data)
-                else:
-                    self.send_response(404)
-                    self.send_header('Content-type', 'text/html')
-                    self.end_headers()
-                    
+            loggedIn = TvNow.login()
+            playBackUrl, drmProtected = TvNow.getPlayBackUrl(int(params['id'][0]), loggedIn, int(params['live'][0]) == 1)
+            if playBackUrl != "":
+                headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
+                r = requests.get(playBackUrl,headers=headers)
+                data = r.text
+                data = re.sub(r'<ContentProtection[^>]*>\s*<(cenc:)?pssh[^>]*>[^>]*</(cenc:)?pssh>\s*</ContentProtection>', '', data)
+                basePath = "/".join(playBackUrl.split('/')[:-1])
+                data = re.sub(r'<BaseURL>([^>]*)</BaseURL>', '<BaseURL>'+basePath+r'/\1</BaseURL>', data)
+                self.send_response(200)
+                self.send_header('Content-type', 'application/xml')
+                self.end_headers()
+                try:
+                    data = data.encode()
+                except:
+                    pass
+                self.wfile.write(data)
             else:
-                self.send_response(403)
+                self.send_response(404)
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
         except Exception as exc:
             self.send_response(400)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-            data = str(exc).encode()
-            self.wfile.write(data)
+            self.wfile.write(str(exc))
             
 
     def log_message(self, *args):
