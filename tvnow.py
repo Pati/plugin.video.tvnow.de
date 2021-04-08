@@ -9,60 +9,13 @@ import datetime
 import time
 import pickle
 import os
-try:  # Python 3
-    from Crypto.Cipher import DES3
-    from Crypto.Util.Padding import pad, unpad
-except:
-    from Cryptodome.Cipher import DES3
-    from Cryptodome.Util.Padding import pad, unpad
-import uuid
-import xml.etree.ElementTree as ET
 
-from platform import node
 import xbmc
 import xbmcgui
 import xbmcaddon, xbmcplugin
 import inputstreamhelper
 
-# Get installed inputstream addon
-def getInputstreamAddon():
-    is_types = ['inputstream.adaptive', 'inputstream.smoothstream']
-    for i in is_types:
-        r = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "id": 1, "method": "Addons.GetAddonDetails", "params": {"addonid":"' + i + '", "properties": ["enabled"]}}')
-        data = json.loads(r)
-        if not "error" in data.keys():
-            if data["result"]["addon"]["enabled"] == True:
-                return i
-        
-    return None
-    
-def getmac():
-    mac = uuid.getnode()
-    if (mac >> 40) % 2:
-        mac = node()
-    return uuid.uuid5(uuid.NAMESPACE_DNS, str(mac)).bytes
-    
-def encode(data):
-    k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0".encode("utf8"))
-    d = k.encrypt(pad(data.encode("utf8"),8))
-    return base64.b64encode(d)
-
-def decode(data):
-    if not data:
-        return ''
-    k = DES3.new(getmac(), DES3.MODE_CBC, iv="\0\0\0\0\0\0\0\0".encode("utf8"))
-    try:
-        d = unpad(k.decrypt(base64.b64decode(data)), 8).decode("utf8")
-        return d
-    except:
-        xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
-        addon = xbmcaddon.Addon()
-        addon.setSetting('password_enc', "")
-        addon.setSetting('email', "")
-        return ""
-    
-
-
+from resources.lib.common import encode, decode, getInputstreamAddon
 
 class TvNow:
     """TvNow Class"""
@@ -83,6 +36,8 @@ class TvNow:
         # Create session with old cookies
         self.session = requests.session()
         self.session.headers.setdefault('User-Agent','Dalvik/2.1.0 (Linux; U; Android 7.1.1)')
+        self.session.headers.setdefault('Referer','https://www.tvnow.de/')
+        self.session.headers.setdefault('Origin','https://www.tvnow.de/')
 
         if self.password_old != "":
             encpassword = encode(self.password_old)
@@ -102,7 +57,6 @@ class TvNow:
             xbmcgui.Dialog().notification('Fehler GetToken', 'Token not found', icon=xbmcgui.NOTIFICATION_ERROR)
             return False
         self.token = data["pageConfig"]["user"]["jwt"]
-        print(self.token)
         return True
 
     def checkPremium(self):
@@ -239,7 +193,6 @@ class TvNow:
             if drmProtected:
                 li.setProperty(is_addon + '.license_type', drm)
                 if self.patchManifest:
-                    live
                     playBackUrl = "http://localhost:42467/?id={}&live={}".format(assetID, 1 if live == True else 0)
             li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
             li.setProperty(is_addon + '.manifest_type', protocol)
