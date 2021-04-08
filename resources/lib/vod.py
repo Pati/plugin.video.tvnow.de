@@ -1,6 +1,4 @@
-import sys
 from tvnow import TvNow
-import navigation as nav
 
 tvnow = TvNow()
 

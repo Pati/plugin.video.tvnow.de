@@ -12,7 +12,7 @@ import json
 import datetime
 import time
 import re
-import resources.lib.common as common
+import common
 from sendung import Sendung
 import tvnow
 apiBase = "https://bff.apigw.tvnow.de"

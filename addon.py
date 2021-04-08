@@ -11,8 +11,8 @@ except:
 import resources.lib.vod as vod
 import os
 import pickle
-from navigation import Navigation
-from database import Database
+from resources.lib.navigation import Navigation
+from resources.lib.database import Database
 import xbmcaddon
 
 addon_handle = int(sys.argv[1])
@@ -55,12 +55,12 @@ if params:
         nav.login()
     elif params['action'] == 'search':
         nav.search()
-    elif params['action'] == 'favList':
+    '''elif params['action'] == 'favList':
         fav = favoriten.Favoriten()
         fav.listfav()
     elif params['action'] == 'favlistAdd':
         fav = favoriten.Favoriten()
-        fav.favadd(params['url'], params['title'] , params['img'])
+        fav.favadd(params['url'], params['title'] , params['img'])'''
     elif params['action'] == 'listSeasonByYear':
         nav.listEpisodesFromSeasonByYear(params['year'], params['month'],params['id'])
 else:

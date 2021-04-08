@@ -15,7 +15,7 @@ import xbmcgui
 import xbmcaddon, xbmcplugin
 import inputstreamhelper
 
-from resources.lib.common import encode, decode, getInputstreamAddon
+from common import encode, decode, getInputstreamAddon
 
 class TvNow:
     """TvNow Class"""
