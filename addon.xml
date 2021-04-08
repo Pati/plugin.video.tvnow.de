@@ -26,7 +26,7 @@
     <email></email>
     <source></source>
     <assets>
-      <icon>icon.png</icon>
+      <icon>resources/icon.png</icon>
     </assets>
   </extension>
 </addon>

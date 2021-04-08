@@ -27,14 +27,22 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             params = parse_qs(urlparse(self.path).query)
             TvNow = tvnow.TvNow()
             loggedIn = TvNow.login()
-            playBackUrl, drmProtected = TvNow.getPlayBackUrl(int(params['id'][0]), loggedIn, int(params['live'][0]) == 1)
+            playBackUrl, = TvNow.getPlayBackUrl(
+                int(params['id'][0]), loggedIn, int(params['live'][0]) == 1)
             if playBackUrl != "":
-                headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0"}
+                headers = {
+                    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64;"
+                        + "x64; rv:59.0) Gecko/20100101 Firefox/59.0")
+                    }
                 r = requests.get(playBackUrl,headers=headers)
                 data = r.text
-                data = re.sub(r'<ContentProtection[^>]*>\s*<(cenc:)?pssh[^>]*>[^>]*</(cenc:)?pssh>\s*</ContentProtection>', '', data)
+                data = re.sub(
+                    (r'<ContentProtection[^>]*>\s*<(cenc:)?pssh[^>]*>'
+                    + r'[^>]*</(cenc:)?pssh>\s*</ContentProtection>'), '', data)
                 basePath = "/".join(playBackUrl.split('/')[:-1])
-                data = re.sub(r'<BaseURL>([^>]*)</BaseURL>', '<BaseURL>'+basePath+r'/\1</BaseURL>', data)
+                data = re.sub(
+                    (r'<BaseURL>([^>]*)</BaseURL>',
+                    '<BaseURL>'+basePath+r'/\1</BaseURL>'), data)
                 self.send_response(200)
                 self.send_header('Content-type', 'application/xml')
                 self.end_headers()
@@ -63,4 +71,6 @@ class ManifestServer(TCPServer):
     """Override TCPServer to allow usage of shared members"""
     def __init__(self, server_address):
         """Initialization of ManifestServer"""
-        TCPServer.__init__(self, server_address, ManifestServerHttpRequestHandler)
+        TCPServer.__init__(
+            self, server_address,
+            ManifestServerHttpRequestHandler)
