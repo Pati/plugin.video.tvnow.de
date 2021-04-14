@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-import xbmc, xbmcgui, xbmcplugin, xbmcaddon, xbmcvfs
 import requests
 try:
     import urllib.parse as ul
@@ -12,9 +11,13 @@ import json
 import datetime
 import time
 import re
-from common import build_url, parseDateTime
-from sendung import Sendung
-import tvnow
+
+import xbmc
+import xbmcgui
+import xbmcplugin
+import xbmcaddon
+from resources.lib.common import build_url, parseDateTime
+import resources.lib.tvnow as tvnow
 apiBase = "https://bff.apigw.tvnow.de"
 formatImageURL = ("https://ais.tvnow.de/tvnow/format/{fid}_formatlogo/408x229/"
     + "image.jpg")

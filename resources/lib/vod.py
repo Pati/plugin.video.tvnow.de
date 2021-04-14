@@ -1,4 +1,4 @@
-from tvnow import TvNow
+from resources.lib.tvnow import TvNow
 
 tvnow = TvNow()
 

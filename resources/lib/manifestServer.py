@@ -11,7 +11,7 @@ try:
     from urlparse import urlparse, parse_qs
 except:
     from urllib.parse import urlparse, parse_qs
-import tvnow
+import resources.lib.tvnow as tvnow
 import re
 
 class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
@@ -27,7 +27,7 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             params = parse_qs(urlparse(self.path).query)
             TvNow = tvnow.TvNow()
             loggedIn = TvNow.login()
-            playBackUrl, = TvNow.getPlayBackUrl(
+            playBackUrl, _ = TvNow.getPlayBackUrl(
                 int(params['id'][0]), loggedIn, int(params['live'][0]) == 1)
             if playBackUrl != "":
                 headers = {
@@ -41,8 +41,8 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     + r'[^>]*</(cenc:)?pssh>\s*</ContentProtection>'), '', data)
                 basePath = "/".join(playBackUrl.split('/')[:-1])
                 data = re.sub(
-                    (r'<BaseURL>([^>]*)</BaseURL>',
-                    '<BaseURL>'+basePath+r'/\1</BaseURL>'), data)
+                    r'<BaseURL>([^>]*)</BaseURL>',
+                    '<BaseURL>'+basePath+r'/\1</BaseURL>', data)
                 self.send_response(200)
                 self.send_header('Content-type', 'application/xml')
                 self.end_headers()

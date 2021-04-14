@@ -12,10 +12,11 @@ import os
 
 import xbmc
 import xbmcgui
+import xbmcvfs
 import xbmcaddon, xbmcplugin
 import inputstreamhelper
 
-from common import encode, decode, getInputstreamAddon
+from resources.lib.common import encode, decode, getInputstreamAddon
 
 class TvNow:
     """TvNow Class"""
@@ -29,7 +30,7 @@ class TvNow:
         self._addon = xbmcaddon.Addon()
         self._username = self._addon.getSetting('email')
         self._password_old = self._addon.getSetting('password')
-        self._datapath = xbmc.translatePath(
+        self._datapath = xbmcvfs.translatePath(
             self._addon.getAddonInfo('profile'))
         self._token = self._addon.getSetting('acc_token')
         self._hdEnabled = self._addon.getSetting('hd_enabled') == "true"

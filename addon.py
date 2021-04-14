@@ -14,12 +14,13 @@ import pickle
 from resources.lib.navigation import Navigation
 from resources.lib.database import Database
 import xbmcaddon
+import xbmcvfs
 
 addon_handle = int(sys.argv[1])
 plugin_base_url = sys.argv[0]
 params = dict(urlparse.parse_qsl(sys.argv[2][1:]))
 addon = xbmcaddon.Addon()
-datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
+datapath = xbmcvfs.translatePath(addon.getAddonInfo('profile'))
 dbPath = datapath + 'Database'
 db = Database()
 if not os.path.isdir(datapath):
@@ -55,12 +56,12 @@ if params:
         nav.login()
     elif params['action'] == 'search':
         nav.search()
-    '''elif params['action'] == 'favList':
-        fav = favoriten.Favoriten()
-        fav.listfav()
-    elif params['action'] == 'favlistAdd':
-        fav = favoriten.Favoriten()
-        fav.favadd(params['url'], params['title'] , params['img'])'''
+    #elif params['action'] == 'favList':
+    #    fav = favoriten.Favoriten()
+    #    fav.listfav()
+    #elif params['action'] == 'favlistAdd':
+    #    fav = favoriten.Favoriten()
+    #    fav.favadd(params['url'], params['title'] , params['img'])
     elif params['action'] == 'listSeasonByYear':
         nav.listEpisodesFromSeasonByYear(params['year'], params['month'],params['id'])
 else:
