@@ -201,6 +201,43 @@ class Navigation():
                         isFolder=False)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
+    def listRecommendation(self, uid):
+        tvNow = tvnow.TvNow()
+        recommendations = tvNow.getRecommendation(uid)
+        if recommendations != None and "items" in recommendations:
+            items = recommendations["items"]
+            for item in items:
+                if "url" in item and "headline" in item:
+                    url = build_url({
+                        'action': 'listPage', 'id': item['url']})
+                    li = xbmcgui.ListItem(item['headline'])
+                    sid = item['url'].split("-")[-1]
+                    imgurl = formatImageURL.replace("{fid}",str(sid))
+                    li.setArt({'poster': imgurl, 'icon' : icon_file})
+                    xbmcplugin.addDirectoryItem(
+                        handle=addon_handle, url=url, listitem=li, isFolder=True)
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
+
+    def listModule(self, url):
+        url = apiBase + url
+        r = requests.get(url)
+        data = r.json()
+        if "items" in data:
+            items = data["items"]
+            for item in items:
+
+                if ("url" in item and "headline" in item and
+                    "type" in item and item["type"] != "custom_manual"):
+                    url = build_url({
+                        'action': 'listPage', 'id': item['url']})
+                    li = xbmcgui.ListItem(item['headline'])
+                    sid = item['url'].split("-")[-1]
+                    imgurl = formatImageURL.replace("{fid}",str(sid))
+                    li.setArt({'poster': imgurl, 'icon' : icon_file})
+                    xbmcplugin.addDirectoryItem(
+                        handle=addon_handle, url=url, listitem=li, isFolder=True)
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
+
     def rootDir(self):
         url = build_url({'action': 'listDictCats', 'id': 'Az'})
         li = xbmcgui.ListItem()
@@ -223,7 +260,32 @@ class Navigation():
         li.setLabel('Suche')
         xbmcplugin.addDirectoryItem(
             handle=addon_handle, url=url, listitem=li, isFolder=True)
-        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
+        tvNow = tvnow.TvNow()
+        recommendations = tvNow.getRecommendationsList()
+        for recommendation in recommendations:
+            if ("moduleLayout" in recommendation and
+               recommendation["moduleLayout"] != "highlight"):
+                name = ""
+                uid = ""
+                if "label" in recommendation:
+                    name = recommendation["label"]
+                if "id" in recommendation:
+                    uid = recommendation["id"]
+                if name != "" and uid != "":
+                    url = None
+                    if ("moduleUrl" in recommendation and
+                        recommendation["moduleUrl"] != None):
+                        url = build_url({'action': 'listModule',
+                                         'id': recommendation["moduleUrl"]})
+                    else:
+                        url = build_url({'action': 'recommendation',
+                                         'id': uid})
+                    li = xbmcgui.ListItem()
+                    li.setLabel(name)
+                    xbmcplugin.addDirectoryItem(
+                        handle=addon_handle, url=url, listitem=li,
+                        isFolder=True)
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
     def listEpisodesFromSeasonByYear(self, year, month, serial_url):
         url = apiBase + serial_url + "?year=" + year + '&month=' + month

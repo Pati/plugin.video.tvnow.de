@@ -56,6 +56,10 @@ if params:
         nav.login()
     elif params['action'] == 'search':
         nav.search()
+    elif params['action'] == 'recommendation':
+        nav.listRecommendation(params["id"])
+    elif params['action'] == 'listModule':
+        nav.listModule(params["id"])
     #elif params['action'] == 'favList':
     #    fav = favoriten.Favoriten()
     #    fav.listfav()

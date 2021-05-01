@@ -37,6 +37,8 @@ class TvNow:
         self._helperActivated = self._addon.getSetting(
             'is_helper_enabled') == "true"
         self._patchManifest = self._addon.getSetting('patch_manifest') == "true"
+        self._recFile = xbmcvfs.translatePath(self._addon.getAddonInfo('profile')) + "recomendations.json"
+
 
         # Create session with old cookies
         self._session = requests.session()
@@ -172,6 +174,34 @@ class TvNow:
             return True
         # If any case is not matched return login failed
         return False
+
+    def getRecommendationsList(self):
+        r = self._session.get("https://bff.apigw.tvnow.de/page/home")
+        try:
+            os.remove(self._recFile)
+        except OSError:
+            pass
+        if r.status_code == 200:
+            with open(self._recFile, "w", encoding='utf-8') as f:
+                f.write(r.content.decode())
+        data = r.json()
+        if "modules" in data:
+            return data["modules"]
+        return []
+
+
+    def getRecommendation(self, uid):
+        data = None
+        with open(self._recFile, encoding='utf-8') as json_file:
+            data = json.load(json_file)
+        if data != None and "modules" in data:
+            data = data["modules"]
+            for item in data:
+                if "id" in item and item["id"] == uid:
+                    return item
+        return None
+
+
 
     def getPlayBackUrl(self, assetID, loggedIn, live = False):
         if live:
