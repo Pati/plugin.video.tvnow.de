@@ -157,7 +157,7 @@ class Navigation():
     def listLiveTV(self):
         tvNow = tvnow.TvNow()
         if tvNow.login():
-            url = apiBase + "/module/teaserrow/epglivetv"
+            url = apiBase + "/epg?isKids=false"
             r = requests.get(url)
             data = r.json()
             for item in data["items"]:
@@ -174,7 +174,7 @@ class Navigation():
                     li.setProperty('IsPlayable', 'true')
                     li.setInfo('video', "")
                     li.setLabel('%s' % (stationName))
-                    li.setArt({'poster': baseJSON["image"][0]["src"]})
+                    li.setArt({'poster': baseJSON["epgImage"]["path"]})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                                 listitem=li, isFolder=False)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
