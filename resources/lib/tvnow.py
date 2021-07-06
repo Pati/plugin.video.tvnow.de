@@ -24,7 +24,7 @@ class TvNow:
     def __init__(self):
         self._tokenset = False
         self._usingAccount = False
-        self._licence_url = ("https://widevine.tvnow.de/index/proxy/|"
+        self._licence_url = ("https://widevine.tvnow.de/index/proxy|"
             + "User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)"
             + "&x-auth-token={TOKEN}|R{SSM}|")
         self._addon = xbmcaddon.Addon()
@@ -208,7 +208,7 @@ class TvNow:
             url = ("https://bff.apigw.tvnow.de/module/player/epg/{}?drm=1") \
                 .format(assetID)
         else:
-            url = "https://bff.apigw.tvnow.de/module/player/{}".format(
+            url = "https://bff.apigw.tvnow.de/player/{}".format(
                 assetID)
         r = self._session.get(url)
         data = r.json()
