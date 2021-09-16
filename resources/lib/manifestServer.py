@@ -27,8 +27,8 @@ class ManifestServerHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             params = parse_qs(urlparse(self.path).query)
             TvNow = tvnow.TvNow()
             loggedIn = TvNow.login()
-            playBackUrl, _ = TvNow.getPlayBackUrl(
-                int(params['id'][0]), loggedIn, int(params['live'][0]) == 1)
+            playBackUrl, _,_ = TvNow.getPlayBackUrl(
+                int(params['id'][0]), loggedIn, int(params['live'][0]) == 1, int(params['event'][0]) == 1)
             if playBackUrl != "":
                 headers = {
                     "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64;"

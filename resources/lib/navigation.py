@@ -13,23 +13,26 @@ import time
 import re
 
 import xbmc
+import xbmcvfs
 import xbmcgui
 import xbmcplugin
 import xbmcaddon
 from resources.lib.common import build_url, parseDateTime
 import resources.lib.tvnow as tvnow
 apiBase = "https://bff.apigw.tvnow.de"
-formatImageURL = ("https://ais.tvnow.de/tvnow/format/{fid}_formatlogo/408x229/"
+formatImageURL = ("https://ais.tvnow.de/tvnow/format/{fid}_formatlogo/300x0/"
     + "image.jpg")
-episodeImageURL = "https://ais.tvnow.de/tvnow/movie/{eid}/408x229/image.jpg"
+formatImageURL2 = ("https://ais-cf.tvnow.de/tvnow/format/{fid}_02logo/400x0/{name}.jpg")
+formatImageFanartURL = ("https://ais-cf.tvnow.de/tvnow/format/{fid}_02logo/1200x0/{name}.jpg")
+filmImagePosterURL = ("https://ais-cf.tvnow.de/tvnow/format/{fid}_08coverdvd/730x0/{name}.jpg")
+filmImageURL = ("https://ais-cf.tvnow.de/tvnow/format/{fid}_09cover169/300x0/{name}.jpg")
+filmImageFanartURL = ("https://ais-cf.tvnow.de/tvnow/format/{fid}_09cover169/1200x0/{name}.jpg")
+
+episodeImageURL = "https://ais.tvnow.de/tvnow/movie/{eid}/300x0/image.jpg"
 addon_handle = int(sys.argv[1])
-try:
-    #py2
-    icon_file = xbmc.translatePath(
-        xbmcaddon.Addon().getAddonInfo('path')+'/icon.png').decode('utf-8')
-except:
-    icon_file = xbmc.translatePath(
+icon_file = xbmcvfs.translatePath(
         xbmcaddon.Addon().getAddonInfo('path')+'/icon.png')
+
 addon = xbmcaddon.Addon()
 plotEnabled = addon.getSetting('plot_enabled') == "true"
 
@@ -118,6 +121,32 @@ class Navigation():
             return password
         return ''
 
+    def _getImageURL(self, data):
+        posterImageURL = None
+        image = None
+        if "images" in data:
+            images = data["images"]
+            if len(images) > 0:
+                image = images[-1]
+        elif "image" in data:
+            image = data["image"]
+        elif "epgImage" in data:
+            image = data["epgImage"]
+        if image != None:
+            if "src" in image:
+                posterImageURL = image["src"]
+            elif ("path" in image and
+                    "filename" in image and
+                    "format" in image):
+                posterImageURL = "{}{}.{}".format(image["path"],
+                                                    image["filename"],
+                                                    image["format"])
+        if posterImageURL == None:
+            posterImageURL = episodeImageURL.replace(
+                "{eid}", str(data['id']))
+        return posterImageURL
+
+
     def __init__(self, db):
         self._db = db
         self._showPremium = (addon.getSetting('premium') == "true")
@@ -156,7 +185,7 @@ class Navigation():
                 'id': item,
                 'dict' : dicttype})
             li = xbmcgui.ListItem(item)
-            li.setArt({'icon': icon_file})
+            #li.setArt({'icon': icon_file})
             xbmcplugin.addDirectoryItem(
                 handle=addon_handle, url=url, listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
@@ -166,9 +195,19 @@ class Navigation():
         for item in d[dictkey]:
             url = build_url({'action': 'listPage', 'id': item.sid})
             li = xbmcgui.ListItem(item.title)
-            sid = item.sid.split("-")[-1]
-            imgurl = formatImageURL.replace("{fid}",str(sid))
-            li.setArt({'poster': imgurl, 'icon': icon_file})
+            sidSplit = item.sid.split("/")[-1].split("-")
+            sid = sidSplit[-1]
+            imgName = "-".join(sidSplit[:-1])
+            imgurl = None
+            posterURL = None
+            fanartURL = None
+            if item.itemType == "film":
+                posterURL = filmImagePosterURL.replace("{fid}",str(sid)).replace("{name}",imgName)
+                fanartURL = filmImageFanartURL.replace("{fid}",str(sid)).replace("{name}",imgName)
+            else:
+                posterURL = formatImageURL2.replace("{fid}",str(sid)).replace("{name}",imgName)
+                fanartURL = formatImageFanartURL.replace("{fid}",str(sid)).replace("{name}",imgName)
+            li.setArt({'poster': posterURL, 'icon': fanartURL, 'fanart': fanartURL})
             xbmcplugin.addDirectoryItem(
                 handle=addon_handle, url=url, listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
@@ -208,14 +247,39 @@ class Navigation():
             items = recommendations["items"]
             for item in items:
                 if "url" in item and "headline" in item:
-                    url = build_url({
-                        'action': 'listPage', 'id': item['url']})
-                    li = xbmcgui.ListItem(item['headline'])
-                    sid = item['url'].split("-")[-1]
-                    imgurl = formatImageURL.replace("{fid}",str(sid))
-                    li.setArt({'poster': imgurl, 'icon' : icon_file})
-                    xbmcplugin.addDirectoryItem(
-                        handle=addon_handle, url=url, listitem=li, isFolder=True)
+                    if ("type" in item and item["type"] != "custom_manual"):
+                        url = build_url({
+                            'action': 'listPage', 'id': item['url']})
+                        if item['headline'] == None:
+                            continue
+                        li = xbmcgui.ListItem(item['headline'])
+                        #sid = item['url'].split("-")[-1]
+                        imgurl = self._getImageURL(item)
+                        #imgurl = formatImageURL.replace("{fid}",str(sid))
+                        li.setArt({'poster': imgurl, 'icon' : imgurl})
+                        xbmcplugin.addDirectoryItem(
+                            handle=addon_handle, url=url, listitem=li, isFolder=True)
+                    else:
+                        if self._showPremium or item["isPremium"] == False:
+                            itemURL = item['url']
+                            if itemURL.startswith("/live-tv/") == False:
+                                continue
+                            sid = itemURL.split("-")[-1]
+                            xbmc.log("- {}".format(sid), level=xbmc.LOGERROR)
+                            url = build_url({'action': 'playEvent',
+                                            'vod_url': sid})
+                            li = xbmcgui.ListItem()
+                            li.setProperty('IsPlayable', 'true')
+                            info = self._getInfoLabel(item)
+                            epName, info = Navigation.getEpName(item, info)
+                            li.setInfo('video',info)
+                            li.setLabel('%s' % (epName))
+                            imgurl = self._getImageURL(item)
+                            li.setArt({'poster': imgurl, 'icon' : imgurl})
+                            xbmcplugin.addDirectoryItem(
+                                handle=addon_handle, url=url, listitem=li,
+                                isFolder=False)
+
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
     def listModule(self, url):
@@ -225,17 +289,37 @@ class Navigation():
         if "items" in data:
             items = data["items"]
             for item in items:
-
                 if ("url" in item and "headline" in item and
-                    "type" in item and item["type"] != "custom_manual"):
-                    url = build_url({
-                        'action': 'listPage', 'id': item['url']})
-                    li = xbmcgui.ListItem(item['headline'])
-                    sid = item['url'].split("-")[-1]
-                    imgurl = formatImageURL.replace("{fid}",str(sid))
-                    li.setArt({'poster': imgurl, 'icon' : icon_file})
-                    xbmcplugin.addDirectoryItem(
-                        handle=addon_handle, url=url, listitem=li, isFolder=True)
+                    "type" in item):
+                    if item["type"] != "custom_manual":
+                        url = build_url({
+                            'action': 'listPage', 'id': item['url']})
+                        li = xbmcgui.ListItem(item['headline'])
+                        #sid = item['url'].split("-")[-1]
+                        imgurl = self._getImageURL(item)#formatImageURL.replace("{fid}",str(sid))
+                        li.setArt({'poster': imgurl, 'icon' : imgurl})
+                        xbmcplugin.addDirectoryItem(
+                            handle=addon_handle, url=url, listitem=li, isFolder=True)
+                    else:
+                        if self._showPremium or item["isPremium"] == False:
+                            itemURL = item['url']
+                            if itemURL.startswith("/live-tv/") == False:
+                                continue
+                            sid = itemURL.split("-")[-1]
+                            url = build_url({'action': 'playLive',
+                                            'vod_url': sid})
+                            li = xbmcgui.ListItem()
+                            li.setProperty('IsPlayable', 'true')
+                            info = self._getInfoLabel(item)
+                            epName, info = Navigation.getEpName(item, info)
+                            li.setInfo('video',info)
+                            li.setLabel('%s' % (epName))
+                            posterImg = self._getImageURL(item)
+                            li.setArt({'poster': posterImg})
+                            xbmcplugin.addDirectoryItem(
+                                handle=addon_handle, url=url, listitem=li,
+                                isFolder=False)
+
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
     def rootDir(self):
@@ -267,7 +351,7 @@ class Navigation():
                recommendation["moduleLayout"] != "highlight"):
                 name = ""
                 uid = ""
-                if "label" in recommendation:
+                if "label" in recommendation and recommendation["label"] != None:
                     name = recommendation["label"]
                 if "id" in recommendation:
                     uid = recommendation["id"]
@@ -315,9 +399,12 @@ class Navigation():
                     epName, info = Navigation.getEpName(episode, info)
                     li.setInfo('video',info)
                     li.setLabel('%s' % (epName))
+                    posterImageURL = self._getImageURL(episode)
+
                     li.setArt({
-                        'poster': episodeImageURL.replace(
-                            "{eid}", str(episode['id'])),
+                        'thumb': posterImageURL,
+                        'fanart': posterImageURL,
+                        'poster': posterImageURL,
                         'clearlogo': formatImageURL.replace(
                             "{fid}", str(fID))})
                     url = build_url({
@@ -330,6 +417,9 @@ class Navigation():
 
     def listEpisodesFromSeason(self, season_id, serial_url):
         url = apiBase + serial_url + "?season=" + season_id
+        sidSplit = serial_url.split("/")[-1].split("-")
+        sid = sidSplit[-1]
+        imgName = "-".join(sidSplit[:-1])
         r = requests.get(url)
         data = r.json()
         if len(data['items']) > 0:
@@ -361,11 +451,12 @@ class Navigation():
                     epName, info = Navigation.getEpName(episode, info)
                     li.setInfo('video', info)
                     li.setLabel(epName)
+                    posterImageURL = self._getImageURL(episode)
+                    fanartURL = formatImageFanartURL.replace("{fid}",str(sid)).replace("{name}",imgName)
                     artDict = {}
-                    artDict['icon'] = formatImageURL.replace("{fid}",str(fID))
-                    if "id" in episode:
-                        artDict['poster'] = episodeImageURL.replace(
-                            "{eid}",str(episode['id']))
+                    #artDict['icon'] = formatImageURL.replace("{fid}",str(fID))
+                    artDict['fanart'] = fanartURL
+                    artDict['poster'] = posterImageURL
                     li.setArt(artDict)
                     url = build_url({
                         'action': 'playVod', 'vod_url': episode["videoId"]})
@@ -383,9 +474,8 @@ class Navigation():
                 url = build_url({
                     'action': 'listPage', 'id': item['url']})
                 li = xbmcgui.ListItem(item['title'])
-                sid = item['url'].split("-")[-1]
-                imgurl = formatImageURL.replace("{fid}",str(sid))
-                li.setArt({'poster': imgurl, 'icon' : icon_file})
+                imgurl = item['image'].replace("/160x0/", "/400x0/")
+                li.setArt({'poster': imgurl, 'icon' : imgurl})
                 xbmcplugin.addDirectoryItem(
                     handle=addon_handle, url=url, listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
@@ -397,13 +487,26 @@ class Navigation():
         movieMetadataURL = -1
         movieID = -1
         url = apiBase + "/page" + serial_url
+        sidSplit = serial_url.split("/")[-1].split("-")
+        sid = sidSplit[-1]
+        imgName = "-".join(sidSplit[:-1])
         r = requests.get(url)
         data = r.json()
         serial_url = ""
+        posterURL = None
         if "title" in data:
             clean_title = data['title'].replace(
                 "im Online Stream ansehen | TVNOW","")
             xbmcplugin.setPluginCategory(addon_handle, clean_title)
+
+        if "meta" in data:
+            meta = data["meta"]
+            for item in meta:
+                if ("property" in item and
+                    item["property"].lower() == "og:image" and
+                    "content" in item):
+                    posterURL = item["content"]
+                    break
 
         for module in data["modules"]:
             if module["moduleLayout"] == "default":
@@ -417,12 +520,13 @@ class Navigation():
                 movieMetadataURL = module["moduleUrl"]
 
         if "id" in data:
-            serial_id = data["id"]
             if modulUrl != "" and serial_url != "":
                 xbmcplugin.setContent(addon_handle, 'seasons')
                 url = apiBase + modulUrl
                 r = requests.get(url)
                 nav_data = r.json()
+                posterURL = formatImageURL2.replace("{fid}",str(sid)).replace("{name}",imgName)
+                fanartURL = formatImageFanartURL.replace("{fid}",str(sid)).replace("{name}",imgName)
                 for items in nav_data["items"]:
                     if "months" in items and "year" in items:
                         for month in reversed(items["months"]):
@@ -435,9 +539,9 @@ class Navigation():
                                 clean_title, month["name"], items['year'])
                             li = xbmcgui.ListItem(label=label)
                             li.setProperty('IsPlayable', 'false')
-                            li.setArt({
-                                'poster': formatImageURL.replace(
-                                    "{fid}", str(serial_id))})
+                            li.setArt({'poster': posterURL,
+                                       'icon': posterURL,
+                                       'fanart': fanartURL})
                             xbmcplugin.addDirectoryItem(
                                 handle=addon_handle, url=url, listitem=li,
                                 isFolder=True)
@@ -450,13 +554,17 @@ class Navigation():
                                 clean_title, items["season"])
                             li = xbmcgui.ListItem(label=label)
                             li.setProperty('IsPlayable', 'false')
-                            li.setArt({
-                                'poster': formatImageURL.replace(
-                                    "{fid}", str(serial_id))})
+                            li.setArt({'poster': posterURL,
+                                       'icon': posterURL,
+                                       'fanart': fanartURL})
                             xbmcplugin.addDirectoryItem(
                                 handle=addon_handle, url=url, listitem=li,
                                 isFolder=True)
             elif movieMetadata != -1 and movieID != -1:
+                imgurl = filmImageURL.replace("{fid}",str(sid)).replace("{name}",imgName)
+                posterURL = filmImagePosterURL.replace("{fid}",str(sid)).replace("{name}",imgName)
+                fanartURL = filmImageFanartURL.replace("{fid}",str(sid)).replace("{name}",imgName)
+
                 if "title" in data:
                     title_stripped = data['title'].replace(
                         "im Online Stream | TVNOW","")
@@ -486,8 +594,9 @@ class Navigation():
                     li.setLabel('%s' % (title_stripped))
                     info = self._getInfoLabel(data, True)
                     li.setInfo('video', info)
-                    li.setArt({'poster': formatImageURL.replace(
-                        "{fid}", str(serial_id))})
+                    li.setArt({'poster': posterURL,
+                                'icon': imgurl,
+                                'fanart': fanartURL})
                     xbmcplugin.addDirectoryItem(
                         handle=addon_handle, url=url, listitem=li,
                         isFolder=False)

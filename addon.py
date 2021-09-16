@@ -26,7 +26,7 @@ db = Database()
 if not os.path.isdir(datapath):
     os.mkdir(datapath)
 if os.path.isfile(dbPath):
-    with open(dbPath) as f:
+    with open(dbPath, 'rb') as f:
         try:
             db = pickle.load(f)
         except:
@@ -40,8 +40,10 @@ nav = Navigation(db)
 if params:
     if params['action'] == 'playVod':
         vod.playAsset(params['vod_url'])
-    if params['action'] == 'playLive':
+    elif params['action'] == 'playLive':
         vod.playLive(params['vod_url'])
+    elif params['action'] == 'playEvent':
+        vod.playEvent(params['vod_url'])
     elif params['action'] == 'listPage':
         nav.listSeasonsFromserial(params['id'])
     elif params['action'] == 'listSeason':
