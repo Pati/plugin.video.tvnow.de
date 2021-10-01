@@ -313,11 +313,14 @@ class Navigation():
                 movieID = module["id"]
             if module["moduleLayout"] == "format_season_navigation" :
                 modulUrl = module["moduleUrl"]
-            elif module["moduleLayout"] == "format_episode":
+            if module["moduleLayout"] == "format_episode":
                 serial_url = module["moduleUrl"]
+            if module["moduleLayout"] == "format_navigation" and modulUrl == "":
+                modulUrl = module["moduleUrl"]
             if module["moduleLayout"] == "moviemetadata":
                 movieMetadata = True
                 movieMetadataURL = module["moduleUrl"]
+
 
         if "id" in data:
             serial_id = data["id"]
@@ -328,7 +331,8 @@ class Navigation():
                 r = requests.get(url)
                 nav_data = r.json()
 
-                for items in nav_data["items"]:
+                navigation = nav_data.get("items", nav_data.get("seasons", {}))
+                for items in navigation:
                     if "months" in items and "year" in items:
                         for month in reversed(items["months"]):
                             url = common.build_url({'action': 'listSeasonByYear', 'year': int(items['year']), 'month': month["month"] , 'id' : serial_url.encode('utf-8')})
@@ -340,7 +344,7 @@ class Navigation():
                                                             listitem=li, isFolder=True)
                     elif "season" in items:
                             url = common.build_url({'action': 'listSeason'.encode('utf-8'), 'season_id': int(items["season"]), 'id' : serial_url.encode('utf-8')})
-                            label = '%s - Staffel %s' % (clean_title, items["season"])
+                            label = items.get("text", '%s - Staffel %s' % (clean_title, items["season"]))
                             li = xbmcgui.ListItem(label=label)
                             li.setProperty('IsPlayable', 'false')
                             li.setArt({'poster': formatImageURL.replace("{fid}",str(serial_id))})
