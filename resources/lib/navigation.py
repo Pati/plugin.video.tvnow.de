@@ -262,11 +262,11 @@ class Navigation():
                     else:
                         if self._showPremium or item["isPremium"] == False:
                             itemURL = item['url']
+                            action = "playEvent"
                             if itemURL.startswith("/live-tv/") == False:
-                                continue
+                                action = "playVod"
                             sid = itemURL.split("-")[-1]
-                            xbmc.log("- {}".format(sid), level=xbmc.LOGERROR)
-                            url = build_url({'action': 'playEvent',
+                            url = build_url({'action': action,
                                             'vod_url': sid})
                             li = xbmcgui.ListItem()
                             li.setProperty('IsPlayable', 'true')
@@ -303,10 +303,11 @@ class Navigation():
                     else:
                         if self._showPremium or item["isPremium"] == False:
                             itemURL = item['url']
+                            action = "playEvent"
                             if itemURL.startswith("/live-tv/") == False:
-                                continue
+                                action = "playVod"
                             sid = itemURL.split("-")[-1]
-                            url = build_url({'action': 'playLive',
+                            url = build_url({'action': action,
                                             'vod_url': sid})
                             li = xbmcgui.ListItem()
                             li.setProperty('IsPlayable', 'true')
@@ -513,11 +514,14 @@ class Navigation():
                 movieID = module["id"]
             if module["moduleLayout"] == "format_season_navigation":
                 modulUrl = module["moduleUrl"]
-            elif module["moduleLayout"] == "format_episode":
+            if module["moduleLayout"] == "format_episode":
                 serial_url = module["moduleUrl"]
+            if module["moduleLayout"] == "format_navigation" and modulUrl == "":
+                modulUrl = module["moduleUrl"]
             if module["moduleLayout"] == "moviemetadata":
                 movieMetadata = True
                 movieMetadataURL = module["moduleUrl"]
+
 
         if "id" in data:
             if modulUrl != "" and serial_url != "":
@@ -527,7 +531,8 @@ class Navigation():
                 nav_data = r.json()
                 posterURL = formatImageURL2.replace("{fid}",str(sid)).replace("{name}",imgName)
                 fanartURL = formatImageFanartURL.replace("{fid}",str(sid)).replace("{name}",imgName)
-                for items in nav_data["items"]:
+                navigation = nav_data.get("items", nav_data.get("seasons", {}))
+                for items in navigation:
                     if "months" in items and "year" in items:
                         for month in reversed(items["months"]):
                             url = build_url({
@@ -550,8 +555,8 @@ class Navigation():
                                 'action': 'listSeason',
                                 'season_id': items["season"],
                                 'id' : serial_url})
-                            label = "{} - Staffel {}".format(
-                                clean_title, items["season"])
+                            label = items.get("text", "{} - Staffel {}".format(
+                                clean_title, items["season"]))
                             li = xbmcgui.ListItem(label=label)
                             li.setProperty('IsPlayable', 'false')
                             li.setArt({'poster': posterURL,

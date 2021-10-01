@@ -217,26 +217,47 @@ class TvNow:
             url = "https://bff.apigw.tvnow.de/player/{}".format(
                 assetID)
         r = self._session.get(url)
-        data = r.json()
-        drmProtected = False
-        drmURL = ""
-        if "videoConfig" in data and "videoSource" in data["videoConfig"]:
-            videoSource = data["videoConfig"]["videoSource"]
-            if "drm" in videoSource:
-                drmProtected = True
-                if "widevine" in videoSource["drm"]:
-                    if "url" in videoSource["drm"]["widevine"]:
-                        drmURL = videoSource["drm"]["widevine"]["url"]
+        if r.status_code == 402:
+            xbmcgui.Dialog().notification(
+                'Premiumaccount erforderlich',
+                'Dieser Stream ist nur mit Premiumaccount verfuegbar',
+                icon=xbmcgui.NOTIFICATION_ERROR)
+        elif r.status_code == 403:
+            xbmcgui.Dialog().notification(
+                'Login erforderlich',
+                'Dieser Stream ist nur mit einem Account verfuegbar',
+                icon=xbmcgui.NOTIFICATION_ERROR)
+        elif r.status_code == 200:
+            data = r.json()
+            drmProtected = False
+            drmURL = ""
+            if "videoConfig" in data and "videoSource" in data["videoConfig"]:
+                videoSource = data["videoConfig"]["videoSource"]
+                if "drm" in videoSource:
+                    drmProtected = True
+                    if "widevine" in videoSource["drm"]:
+                        if "url" in videoSource["drm"]["widevine"]:
+                            drmURL = videoSource["drm"]["widevine"]["url"]
 
-            if drmProtected and not loggedIn:
-                self._getToken(data)
-            if "streams" in videoSource:
-                streams = videoSource["streams"]
-                if "dashHdUrl" in streams and self._hdEnabled:
-                    return streams["dashHdUrl"], drmProtected, drmURL
-                # Fallback
-                if "dashUrl" in streams:
-                    return streams["dashUrl"], drmProtected, drmURL
+                if drmProtected and not loggedIn:
+                    self._getToken(data)
+                if "streams" in videoSource:
+                    streams = videoSource["streams"]
+                    if "dashHdUrl" in streams and self._hdEnabled:
+                        return streams["dashHdUrl"], drmProtected, drmURL
+                    # Fallback
+                    if "dashUrl" in streams:
+                        return streams["dashUrl"], drmProtected, drmURL
+            xbmcgui.Dialog().notification(
+                    'Abspielen fehlgeschlagen',
+                    'Es ist keine AbspielURL vorhanden',
+                    icon=xbmcgui.NOTIFICATION_ERROR)
+        else:
+            xbmcgui.Dialog().notification(
+                'Unbekannter Fehler',
+                'Für Detail kodi.log prüfen',
+                icon=xbmcgui.NOTIFICATION_ERROR)
+            xbmc.log("Login Error: {}".format(r.text), level=xbmc.LOGERROR)
         return "", drmProtected, ""
 
 
@@ -280,9 +301,4 @@ class TvNow:
             # Start Playing
             addon_handle = int(sys.argv[1])
             xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
-        else:
-            xbmcgui.Dialog().notification(
-                'Abspielen fehlgeschlagen',
-                'Es ist keine AbspielURL vorhanden',
-                icon=xbmcgui.NOTIFICATION_ERROR)
 
