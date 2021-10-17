@@ -268,10 +268,9 @@ class TvNow:
             assetID, loggedIn, live, event)
         if playBackUrl != "":
             if drmProtected and drmURL == "":
-                if live:
-                    drmURL = "https://widevine.tvnow.de/index/license"
-                else:
-                    drmURL = "https://widevine.tvnow.de/index/proxy"
+                drmURL = "https://widevine.tvnow.de/index/proxy"
+            if live:
+                drmURL = "https://widevine.tvnow.de/index/license"
             li = xbmcgui.ListItem()
             protocol = 'mpd'
             drm = 'com.widevine.alpha'
