@@ -219,6 +219,8 @@ class TvNow:
 
 
     def play(self, assetID, live=False):
+        if live:
+            self.licence_url = self.licence_url.replace('https://widevine.tvnow.de/index/proxy', 'https://widevine.tvnow.de/index/license')
         loggedIn = self.login()
         # Prepare new ListItem to start playback
         playBackUrl, drmProtected = self.getPlayBackUrl(assetID, loggedIn, live)
