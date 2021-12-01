@@ -231,8 +231,8 @@ class TvNow:
             data = r.json()
             drmProtected = False
             drmURL = ""
-            if "videoConfig" in data and "videoSource" in data["videoConfig"]:
-                videoSource = data["videoConfig"]["videoSource"]
+            if "videoConfig" in data and "sources" in data["videoConfig"]:
+                videoSource = data["videoConfig"]["sources"]
                 if "drm" in videoSource:
                     drmProtected = True
                     if "widevine" in videoSource["drm"]:
@@ -241,13 +241,11 @@ class TvNow:
 
                 if drmProtected and not loggedIn:
                     self._getToken(data)
-                if "streams" in videoSource:
-                    streams = videoSource["streams"]
-                    if "dashHdUrl" in streams and self._hdEnabled:
-                        return streams["dashHdUrl"], drmProtected, drmURL
-                    # Fallback
-                    if "dashUrl" in streams:
-                        return streams["dashUrl"], drmProtected, drmURL
+                if "dashUrl" in videoSource and self._hdEnabled:
+                    return videoSource["dashUrl"], drmProtected, drmURL
+                # Fallback
+                if "dashFallbackUrl" in videoSource:
+                    return videoSource["dashFallbackUrl"], drmProtected, drmURL
             xbmcgui.Dialog().notification(
                     'Abspielen fehlgeschlagen',
                     'Es ist keine AbspielURL vorhanden',

@@ -496,8 +496,11 @@ class Navigation():
         serial_url = ""
         posterURL = None
         if "title" in data:
-            clean_title = data['title'].replace(
-                "im Online Stream ansehen | TVNOW","")
+            suffixIdx = data['title'].rfind('im Online Stream ansehen |')
+            if suffixIdx != -1:
+                clean_title = data['title'][:suffixIdx]
+            else:
+                clean_title = data['title']
             xbmcplugin.setPluginCategory(addon_handle, clean_title)
 
         if "meta" in data:
