@@ -205,16 +205,17 @@ class TvNow:
         r = self.session.get(url)
         data = r.json()
         drmProtected = False
-        if "videoConfig" in data and "videoSource" in data["videoConfig"]:
-            if "drm" in data["videoConfig"]["videoSource"]:
+        if "videoConfig" in data and "sources" in data["videoConfig"]:
+            videoSource = data["videoConfig"]["sources"]
+            if "drm" in videoSource:
                 drmProtected = True
             if drmProtected and not loggedIn:
                 self.getToken(data)
-            if "streams" in data["videoConfig"]["videoSource"]:
-                if "dashHdUrl" in data["videoConfig"]["videoSource"]["streams"] and self.hdEnabled:
-                    return data["videoConfig"]["videoSource"]["streams"]["dashHdUrl"], drmProtected
-                if "dashUrl" in data["videoConfig"]["videoSource"]["streams"]: # Fallback
-                    return data["videoConfig"]["videoSource"]["streams"]["dashUrl"], drmProtected
+            if "dashUrl" in videoSource and self._hdEnabled:
+                return videoSource["dashUrl"], drmProtected
+            # Fallback
+            if "dashFallbackUrl" in videoSource:
+                return videoSource["dashFallbackUrl"], drmProtected
         return "", drmProtected
 
 
