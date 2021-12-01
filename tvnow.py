@@ -211,7 +211,7 @@ class TvNow:
                 drmProtected = True
             if drmProtected and not loggedIn:
                 self.getToken(data)
-            if "dashUrl" in videoSource and self._hdEnabled:
+            if "dashUrl" in videoSource and self.hdEnabled:
                 return videoSource["dashUrl"], drmProtected
             # Fallback
             if "dashFallbackUrl" in videoSource:
