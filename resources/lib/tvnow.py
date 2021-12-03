@@ -211,7 +211,7 @@ class TvNow:
                 url = "https://bff.apigw.tvnow.de/player/live/{}".format(
                 assetID)
             else:
-                url = ("https://bff.apigw.tvnow.de/module/player/epg/{}?drm=1") \
+                url = ("https://bff.apigw.tvnow.de/player/livetv/{}?drm=1&kids=false&playertracking=true") \
                     .format(assetID)
         else:
             url = "https://bff.apigw.tvnow.de/player/{}".format(
@@ -246,6 +246,23 @@ class TvNow:
                 # Fallback
                 if "dashFallbackUrl" in videoSource:
                     return videoSource["dashFallbackUrl"], drmProtected, drmURL
+            if "videoConfig" in data and "videoSource" in data["videoConfig"]:
+                videoSource = data["videoConfig"]["videoSource"]
+                if "drm" in videoSource:
+                    drmProtected = True
+                    if "widevine" in videoSource["drm"]:
+                        if "url" in videoSource["drm"]["widevine"]:
+                            drmURL = videoSource["drm"]["widevine"]["url"]
+
+                if drmProtected and not loggedIn:
+                    self._getToken(data)
+                if "streams" in videoSource:
+                    streams = videoSource["streams"]
+                    if "dashHdUrl" in streams and self._hdEnabled:
+                        return streams["dashHdUrl"], drmProtected, drmURL
+                    # Fallback
+                    if "dashUrl" in streams:
+                        return streams["dashUrl"], drmProtected, drmURL
             xbmcgui.Dialog().notification(
                     'Abspielen fehlgeschlagen',
                     'Es ist keine AbspielURL vorhanden',
