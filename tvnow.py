@@ -70,7 +70,7 @@ class TvNow:
     def __init__(self):
         self.tokenset = False
         self.usingAccount = False
-        self.licence_url = 'https://widevine.tvnow.de/index/proxy|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
+        self.licence_url = '{LICURL}|User-Agent=Dalvik%2F2.1.0%20(Linux;%20U;%20Android%207.1.1)&x-auth-token={TOKEN}|R{SSM}|'
         self.addon = xbmcaddon.Addon()
         self.username = self.addon.getSetting('email')
         self.password_old = self.addon.getSetting('password')
@@ -125,7 +125,7 @@ class TvNow:
         """Check if User is still logged in with the old Token"""
         if not self.tokenset or self.username == "":
             return False
-        loggedIn = False
+        loggedIn = True
         base64Parts = self.token.split(".")
         token = "%s==" % base64Parts[1]
         userData = json.loads(base64.b64decode(token))
@@ -203,40 +203,71 @@ class TvNow:
         else:
             url = "https://bff.apigw.tvnow.de/player/%d" % int(assetID)
         r = self.session.get(url)
-        data = r.json()
-        drmProtected = False
-        if "videoConfig" in data and "sources" in data["videoConfig"]:
-            videoSource = data["videoConfig"]["sources"]
-            if "drm" in videoSource:
-                drmProtected = True
-            if drmProtected and not loggedIn:
-                self.getToken(data)
-            if "dashUrl" in videoSource and self.hdEnabled:
-                return videoSource["dashUrl"], drmProtected
-            # Fallback
-            if "dashFallbackUrl" in videoSource:
-                return videoSource["dashFallbackUrl"], drmProtected
+        if r.status_code == 402:
+            xbmcgui.Dialog().notification(
+                'Premiumaccount erforderlich',
+                'Dieser Stream ist nur mit Premiumaccount verfuegbar',
+                icon=xbmcgui.NOTIFICATION_ERROR)
+        elif r.status_code == 403:
+            xbmcgui.Dialog().notification(
+                'Login erforderlich',
+                'Dieser Stream ist nur mit einem Account verfuegbar',
+                icon=xbmcgui.NOTIFICATION_ERROR)
+        elif r.status_code == 200:
+            data = r.json()
+            drmProtected = False
+            drmURL = ""
+            if "videoConfig" in data and "sources" in data["videoConfig"]:
+                videoSource = data["videoConfig"]["sources"]
+                if "drm" in videoSource:
+                    drmProtected = True
+                    if "widevine" in videoSource["drm"]:
+                        if "url" in videoSource["drm"]["widevine"]:
+                            drmURL = videoSource["drm"]["widevine"]["url"]
 
-        if "videoConfig" in data and "videoSource" in data["videoConfig"]:
-            if "drm" in data["videoConfig"]["videoSource"]:
-                drmProtected = True
-            if drmProtected and not loggedIn:
-                self.getToken(data)
-            if "streams" in data["videoConfig"]["videoSource"]:
-                if "dashHdUrl" in data["videoConfig"]["videoSource"]["streams"] and self.hdEnabled:
-                    return data["videoConfig"]["videoSource"]["streams"]["dashHdUrl"], drmProtected
-                if "dashUrl" in data["videoConfig"]["videoSource"]["streams"]: # Fallback
-                    return data["videoConfig"]["videoSource"]["streams"]["dashUrl"], drmProtected
-        return "", drmProtected
+                if drmProtected and not loggedIn:
+                    self.getToken(data)
+                if "dashUrl" in videoSource and self.hdEnabled:
+                    return videoSource["dashUrl"], drmProtected, drmURL
+                # Fallback
+                if "dashFallbackUrl" in videoSource:
+                    return videoSource["dashFallbackUrl"], drmProtected, drmURL
+
+            if "videoConfig" in data and "videoSource" in data["videoConfig"]:
+                videoSource = data["videoConfig"]["videoSource"]
+                if "drm" in videoSource:
+                    drmProtected = True
+                    if "widevine" in videoSource["drm"]:
+                        if "url" in videoSource["drm"]["widevine"]:
+                            drmURL = videoSource["drm"]["widevine"]["url"]
+
+                if drmProtected and not loggedIn:
+                    self.getToken(data)
+                if "streams" in data["videoConfig"]["videoSource"]:
+                    if "dashHdUrl" in data["videoConfig"]["videoSource"]["streams"] and self.hdEnabled:
+                        return data["videoConfig"]["videoSource"]["streams"]["dashHdUrl"], drmProtected, drmURL
+                    if "dashUrl" in data["videoConfig"]["videoSource"]["streams"]: # Fallback
+                        return data["videoConfig"]["videoSource"]["streams"]["dashUrl"], drmProtected, drmURL
+            xbmcgui.Dialog().notification(
+                    'Abspielen fehlgeschlagen',
+                    'Es ist keine AbspielURL vorhanden',
+                    icon=xbmcgui.NOTIFICATION_ERROR)
+        else:
+            xbmcgui.Dialog().notification(
+                'Unbekannter Fehler',
+                'Fuer Details kodi.log pruefen',
+                icon=xbmcgui.NOTIFICATION_ERROR)
+            xbmc.log("Login Error: {}".format(r.text), level=xbmc.LOGERROR)
+        return "", drmProtected, ""
 
 
     def play(self, assetID, live=False):
-        if live:
-            self.licence_url = self.licence_url.replace('https://widevine.tvnow.de/index/proxy', 'https://widevine.tvnow.de/index/license')
         loggedIn = self.login()
         # Prepare new ListItem to start playback
-        playBackUrl, drmProtected = self.getPlayBackUrl(assetID, loggedIn, live)
+        playBackUrl, drmProtected, drmURL = self.getPlayBackUrl(assetID, loggedIn, live)
         if playBackUrl != "":
+            if drmProtected and drmURL == "":
+                drmURL = "https://widevine.tvnow.de/index/proxy"
             li = xbmcgui.ListItem()
             protocol = 'mpd'
             drm = 'com.widevine.alpha'
@@ -255,7 +286,7 @@ class TvNow:
                 if self.patchManifest:
                     live
                     playBackUrl = "http://localhost:42467/?id={}&live={}".format(assetID, 1 if live == True else 0)
-            li.setProperty(is_addon + '.license_key', self.licence_url.replace("{TOKEN}",self.token))
+            li.setProperty(is_addon + '.license_key', self.licence_url.replace("{LICURL}", drmURL).replace("{TOKEN}",self.token))
             li.setProperty(is_addon + '.manifest_type', protocol)
             if live:
                 li.setProperty(is_addon + '.manifest_update_parameter',  "full")
