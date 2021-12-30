@@ -95,7 +95,7 @@ class TvNow:
         """Check if User is still logged in with the old Token"""
         if not self._tokenset or self._username == "":
             return False
-        loggedIn = False
+        loggedIn = True
         base64Parts = self._token.split(".")
         token = "%s==" % base64Parts[1]
         userData = json.loads(base64.b64decode(token))
@@ -284,8 +284,6 @@ class TvNow:
         if playBackUrl != "":
             if drmProtected and drmURL == "":
                 drmURL = "https://widevine.tvnow.de/index/proxy"
-            if live:
-                drmURL = "https://widevine.tvnow.de/index/license"
             li = xbmcgui.ListItem()
             protocol = 'mpd'
             drm = 'com.widevine.alpha'
